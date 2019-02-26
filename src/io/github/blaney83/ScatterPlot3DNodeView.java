@@ -1,6 +1,10 @@
 package io.github.blaney83;
 
 import org.knime.core.node.NodeView;
+import org.knime.core.node.defaultnodesettings.SettingsModelString;
+
+import io.github.blaney83.mvlrgraph.MVLRGraphNodeModel;
+import io.github.blaney83.mvlrgraph.MVLRGraphNodeViewPanel;
 
 /**
  * <code>NodeView</code> for the "ScatterPlot3D" Node.
@@ -10,52 +14,45 @@ import org.knime.core.node.NodeView;
  */
 public class ScatterPlot3DNodeView extends NodeView<ScatterPlot3DNodeModel> {
 
-    /**
-     * Creates a new view.
-     * 
-     * @param nodeModel The model (class: {@link ScatterPlot3DNodeModel})
-     */
-    protected ScatterPlot3DNodeView(final ScatterPlot3DNodeModel nodeModel) {
-        super(nodeModel);
+	// view config variables
+	public static final String CFGKEY_GRAPH_TITLE = "graphTitle";
+	public static final String CFGKEY_GRAPH_EQUATION = "graphEquation";
 
-        // TODO instantiate the components of the view here.
+	// view defaults
+	static final String DEFAULT_GRAPH_TITLE = "Regression Model (plane) & Real Data (scatter)";
+	static final boolean DEFAULT_GRAPH_EQUATION = true;
 
-    }
+	// settings models
+	final SettingsModelString m_graphTitle = new SettingsModelString(CFGKEY_GRAPH_EQUATION, DEFAULT_GRAPH_TITLE);
+	
+	private ScatterPlot3DNodeViewPanel m_borderLayout;
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void modelChanged() {
+	protected ScatterPlot3DNodeView(final ScatterPlot3DNodeView nodeModel) {
+		super(nodeModel);
+		m_borderLayout = new ScatterPlot3DNodeViewPanel(nodeModel);
+		setComponent(m_borderLayout);
+	}
 
-        // TODO retrieve the new model from your nodemodel and 
-        // update the view.
-        ScatterPlot3DNodeModel nodeModel = 
-            (ScatterPlot3DNodeModel)getNodeModel();
-        assert nodeModel != null;
-        
-        // be aware of a possibly not executed nodeModel! The data you retrieve
-        // from your nodemodel could be null, emtpy, or invalid in any kind.
-        
-    }
+	@Override
+	protected void modelChanged() {
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onClose() {
-    
-        // TODO things to do when closing the view
-    }
+		ScatterPlot3DNodeModel updatedModel = getNodeModel();
+		if(updatedModel != null) {
+			m_borderLayout.updateView(updatedModel);
+			setComponent(m_borderLayout);
+		}
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onOpen() {
+	}
 
-        // TODO things to do when opening the view
-    }
+	@Override
+	protected void onClose() {
+
+	}
+
+	@Override
+	protected void onOpen() {
+
+	}
 
 }
 
