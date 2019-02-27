@@ -15,20 +15,28 @@ import org.knime.core.node.util.filter.column.DataColumnSpecFilterConfiguration;
 import org.knime.core.node.util.filter.column.DataTypeColumnFilter;
 
 public class ScatterPlot3DSettings {
+	
+	//port settings 
+	public static final int MAIN_DATA_TABLE_IN_PORT = 0;
+	
+	//externals file config
+	private static final String FILE_NAME = "scatter_plot_3_d.xml";
 
 	// static internal config keys
 	static final String CFGKEY_COUNT = "count";
-	static final String CFGKEY_COL_NAME = "columnName";
-	static final String CFGKEY_COL_FILTER = "colFilter";
 	static final String CFGKEY_X_AXIS_VAR_COLUMN = "xAxisVarColumn";
 	static final String CFGKEY_Y_AXIS_VAR_COLUMN = "yAxisVarColumn";
-	static final String CFGKEY_APPEND_CALCULATED_TARGET = "calculatedTarget";
-	static final String CFGKEY_NUM_APPROX_COLUMN = "numApproxColumns";
+	static final String CFGKEY_Z_AXIS_VAR_COLUMN = "zAxisVarColumn";
 	static final String CFGKEY_SHOW_ALL = "showAllData";
-	static final String CFGKEY_SHOW_REG_MODEL = "showRegressionModel";
-	static final String CFGKEY_FILTER_TYPE = "filterType";
-	static final String CFGKEY_INCLUDED_COLUMNS = "includedColumns";
+	static final String CFGKEY_PRE_CLUSTERED_DATA = "isClustered";
+	static final String CFGKEY_NUMBER_CLUSTERS = "numClusters";
+	static final String CFGKEY_CLUSTER_TYPE = "typeCluster";
+static final String CFGKEY_INCLUDED_COLUMNS = "includedColumns";
 	static final String CFGKEY_EXCLUDED_COLUMNS = "excludedColumns";
+
+	//filter cfg keys
+	static final String CFGKEY_COL_FILTER = "colFilter";
+	static final String CFGKEY_FILTER_TYPE = "filterType";
 	static final String CFGKEY_FILTER_ENFORCE = "enforceOption";
 	static final String CFGKEY_FILTER_TYPE_LIST = "typeList";
 	static final String CFGKEY_DEFAULT_SETTINGS_NAME = "defaultSettings";
@@ -39,25 +47,22 @@ public class ScatterPlot3DSettings {
 	// static internal defaults
 	static final int DEFAULT_COUNT = 100;
 	static final boolean DEFAULT_APPEND_CALCULATED_TARGET = false;
-	static final boolean DEFAULT_IS_H2O_NODE = false;
+	static final boolean DEFAULT_PRE_CLUSTERED_DATA = false;
+	static final String DEFAULT_CLUSTER_TYPE = "K-Means";
 	static final boolean DEFAULT_SHOW_ALL_DATA = false;
-	static final boolean DEFAULT_SHOW_REG_MODEL = true;
 	static final String DEFAULT_FILTER_TYPE = "STANDARD";
 
 	// settings model declarations
 	private final SettingsModelIntegerBounded m_count = new SettingsModelIntegerBounded(CFGKEY_COUNT,
 			DEFAULT_COUNT, 0, Integer.MAX_VALUE);
-	protected final SettingsModelColumnName m_colName = new SettingsModelColumnName(CFGKEY_COL_NAME, "");
 	protected final SettingsModelColumnName m_xAxisVarColumn = new SettingsModelColumnName(CFGKEY_X_AXIS_VAR_COLUMN,
 			"");
 	protected final SettingsModelColumnName m_yAxisVarColumn = new SettingsModelColumnName(CFGKEY_Y_AXIS_VAR_COLUMN,
 			"");
-	protected final SettingsModelBoolean m_appendCalculatedTarget = new SettingsModelBoolean(
-			CFGKEY_APPEND_CALCULATED_TARGET, DEFAULT_APPEND_CALCULATED_TARGET);
+	protected final SettingsModelColumnName m_zAxisVarColumn = new SettingsModelColumnName(CFGKEY_Z_AXIS_VAR_COLUMN,
+			"");
 	protected final SettingsModelBoolean m_showAllData = new SettingsModelBoolean(CFGKEY_SHOW_ALL,
 			DEFAULT_SHOW_ALL_DATA);
-	protected final SettingsModelBoolean m_showRegressionModel = new SettingsModelBoolean(CFGKEY_SHOW_REG_MODEL,
-			DEFAULT_SHOW_REG_MODEL);
 
 	@SuppressWarnings("unchecked")
 	protected final DataColumnSpecFilterConfiguration m_filterConfiguration = new DataColumnSpecFilterConfiguration(
@@ -67,14 +72,10 @@ public class ScatterPlot3DSettings {
 	public void loadSettingsFrom(final NodeSettingsRO settings)
 			throws InvalidSettingsException {
 		m_count.setIntValue(settings.getInt(CFGKEY_COUNT));
-		m_colName.setStringValue(settings.getString(CFGKEY_COL_NAME));
 		m_filterConfiguration.loadConfigurationInModel(settings);
 		m_xAxisVarColumn.setStringValue(settings.getString(CFGKEY_X_AXIS_VAR_COLUMN));
 		m_yAxisVarColumn.setStringValue(settings.getString(CFGKEY_Y_AXIS_VAR_COLUMN));
-		m_appendCalculatedTarget.setBooleanValue(settings.getBoolean(CFGKEY_APPEND_CALCULATED_TARGET));
 		m_showAllData.setBooleanValue(settings.getBoolean(CFGKEY_SHOW_ALL));
-		m_showRegressionModel.setBooleanValue(settings.getBoolean(CFGKEY_SHOW_REG_MODEL));
-		
 	}
 
 	public void loadSettingsInDialog(final NodeSettingsRO settings, final DataTableSpec spec)

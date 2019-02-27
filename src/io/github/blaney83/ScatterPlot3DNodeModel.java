@@ -53,11 +53,10 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	ScatterPlot3DSettings m_settings = new ScatterPlot3DSettings();
 
 	// inport fields
-	public static final int COEFFICIENT_IN_PORT = 0;
-	public static final int DATA_TABLE_IN_PORT = 1;
+	public static final int MAIN_DATA_TABLE_IN_PORT = 0;
 
 	// Model Content File
-	private static final String FILE_NAME = "mvlrGraphInternals.xml";
+	private static final String FILE_NAME = "ScatterPlot.xml";
 
 	// save/load cfg keys
 	static final String INTERNAL_MODEL_NAME_KEY = "internalModel";
