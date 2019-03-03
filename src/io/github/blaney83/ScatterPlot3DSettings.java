@@ -22,9 +22,10 @@ public class ScatterPlot3DSettings {
 
 	// port settings
 	public static final int MAIN_DATA_TABLE_IN_PORT = 0;
+	public static final int PROTOTYPE_TABLE_IN_PORT = 1;
 
 	// externals file config
-	private static final String FILE_NAME = "scatter_plot_3_d.xml";
+	protected static final String FILE_NAME = "scatter_plot_3_d.xml";
 
 	// static internal config keys
 	static final String CFGKEY_X_AXIS_VAR_COLUMN = "xAxisVarColumn";
@@ -57,7 +58,7 @@ public class ScatterPlot3DSettings {
 	// static internal defaults
 	static final boolean DEFAULT_PRE_CLUSTERED_DATA = false;
 	static final String DEFAULT_CLUSTER_TYPE = "K-Means";
-	static final String[] DEFAULT_CLUSTER_TYPES_ARRAY = new String[]{"K-Means", "Fuzzy C-Means"};
+	static final String[] DEFAULT_CLUSTER_TYPES_ARRAY = new String[]{"K-Means", "Fuzzy C-Means", "DBSCAN"};
 	static final String DEFAULT_FILTER_TYPE = "STANDARD";
 	static final boolean DEFAULT_PROTOTYPES_PROVIDED = false;
 

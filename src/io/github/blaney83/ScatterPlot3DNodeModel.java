@@ -41,22 +41,17 @@ import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 
-
 /**
- * This is the model implementation of ScatterPlot3D.
- * A 3 Dimensional representation of points in space for a given data set.
+ * This is the model implementation of ScatterPlot3D. A 3 Dimensional
+ * representation of points in space for a given data set.
  *
  * @author Benjamin Laney
  */
 public class ScatterPlot3DNodeModel extends NodeModel {
-    
+	//considerations:
+	//maybe include key for cluster colors
+
 	ScatterPlot3DSettings m_settings = new ScatterPlot3DSettings();
-
-	// inport fields
-	public static final int MAIN_DATA_TABLE_IN_PORT = 0;
-
-	// Model Content File
-	private static final String FILE_NAME = "ScatterPlot.xml";
 
 	// save/load cfg keys
 	static final String INTERNAL_MODEL_NAME_KEY = "internalModel";
@@ -64,18 +59,6 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	static final String INTERNAL_MODEL_NUM_CALC_POINT_KEY = "numCalcPoints";
 	static final String INTERNAL_MODEL_TERM_KEY = "fnTerm";
 	static final String INTERNAL_MODEL_POINT_KEY = "calcPoint";
-
-	// view options
-	// color rainbow- under, on, over
-	// opacity of planar field
-	// point size
-
-	// default settings fields
-	static final int DEFAULT_COUNT = 100;
-	static final boolean DEFAULT_APPEND_CALCULATED_TARGET = false;
-	static final boolean DEFAULT_IS_H2O_NODE = false;
-	static final boolean DEFAULT_SHOW_ALL_DATA = false;
-	static final boolean DEFAULT_SHOW_REG_MODEL = true;
 
 	// INTERNAL NODE FIELDS
 	// model inter-method variables
@@ -91,8 +74,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	protected CalculatedPoint[] m_calcPoints;
 
 	protected ScatterPlot3DNodeModel() {
-		// two in-ports, one out-port
-		super(1, 1);
+		super(2, 1);
 	}
 
 	@Override
@@ -110,20 +92,22 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 		Set<String> correctRegressionColumnsSelected = new LinkedHashSet<String>();
 
 		for (FunctionTerm fnTerm : m_termSet) {
-			if(fnTerm.getVarName().equals(m_settings.getXAxisVarColumn()) || fnTerm.getVarName().equals(m_settings.getYAxisVarColumn())) {
+			if (fnTerm.getVarName().equals(m_settings.getXAxisVarColumn())
+					|| fnTerm.getVarName().equals(m_settings.getYAxisVarColumn())) {
 				correctRegressionColumnsSelected.add(fnTerm.getVarName());
 			}
 			processColumn(dataTable, fnTerm);
 		}
-		if(correctRegressionColumnsSelected.size() != 2) {
-			throw new InvalidSettingsException("The columns you chose do not match with the columns modeled by the Regression Model. "
-					+ "Please ensure the two selected columns were used in the creation of the Regression Equation.");
+		if (correctRegressionColumnsSelected.size() != 2) {
+			throw new InvalidSettingsException(
+					"The columns you chose do not match with the columns modeled by the Regression Model. "
+							+ "Please ensure the two selected columns were used in the creation of the Regression Equation.");
 		}
 
 		if (m_settings.getCount() > dataTable.size() || m_settings.getShowAllData()) {
 			m_settings.setCount((int) dataTable.size());
 		}
-		
+
 		m_calcPoints = new CalculatedPoint[m_settings.getCount()];
 		int iterations = 0;
 		for (DataRow dataRow : dataTable) {
@@ -135,7 +119,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 		}
 
 		BufferedDataTable bufferedOutput;
-		//calculate values anyways, so as to color points on graph accordingly
+		// calculate values anyways, so as to color points on graph accordingly
 		CellFactory cellFactory = new MVLRGraphCellFactory(createCalcValsOutputColumnSpec(),
 				inData[DATA_TABLE_IN_PORT].getDataTableSpec(), m_termSet, m_calcPoints);
 		ColumnRearranger outputTable = new ColumnRearranger(inData[DATA_TABLE_IN_PORT].getDataTableSpec());
@@ -190,7 +174,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 				meanSum += value;
 				lowerBound = Math.min(lowerBound, value);
 				upperBound = Math.max(upperBound, value);
-				
+
 				totalRows++;
 			}
 			DataColumnDomainCreator colDomainCreator = new DataColumnDomainCreator();
@@ -234,18 +218,30 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	@Override
 	protected DataTableSpec[] configure(final DataTableSpec[] inSpecs) throws InvalidSettingsException {
 
-		
-		if (inSpecs[COEFFICIENT_IN_PORT] == null || inSpecs[DATA_TABLE_IN_PORT] == null) {
+		if ( inSpecs[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT] == null) {
 			throw new InvalidSettingsException(
-					"Please provide a regression coefficient table to In-Port #1 and a data table to In-Port #2.");
+					"Please provide a data table to In-Port #1.");
 		} else {
+			//validate three columns of double-compatible values inport 1
+			//if inport 2 exists, validate three columns of doubles
+			//if inport 2 exists, validate K-means (maybe)
+			//if inport 2 exists, validate matching columns between tables
+			//if inport 2 is valid, then setProvidedPrototypes = true
+			
+			//I think thats it.... unless all settings validated here and then...
+			//validate only three matching columns
+			//if three columns and inport 2, validate matching columns selected and matching prototype columns
+			//if isClustered == true, then validate clusters column
+			//if prototypesProvided == true && clusterType == "k-means", then validate inport2
+			//maybe throw warning about correct numClusters and crash if incorrect...
+			//if dbscan clusterType, then handle "Noise" cluster
 			if (!inSpecs[COEFFICIENT_IN_PORT].containsCompatibleType(StringValue.class)
 					&& !inSpecs[COEFFICIENT_IN_PORT].containsCompatibleType(DoubleValue.class)) {
 				throw new InvalidSettingsException(
 						"The coefficient table provided does not meet the requirements for this node. It should contain at least a column containing the row keys (variables of the regression equation) in the associated data column and a numeric coefficients column.");
 			}
-			
-			if(m_settings.getColName() == null) {
+
+			if (m_settings.getColName() == null) {
 				throw new InvalidSettingsException("No target column selected");
 			}
 			// checking input ind. 0
@@ -274,7 +270,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 					coeffTableColumns.length == 1 && coeffTableColumns[0].toLowerCase().trim().equals("beta")
 					&& inSpecs[COEFFICIENT_IN_PORT].getColumnSpec(coeffTableColumns[0]).getType()
 							.isCompatible(DoubleValue.class)) {
-				
+
 				m_inPort1CoeffColumnIndex = inSpecs[COEFFICIENT_IN_PORT].findColumnIndex(coeffTableColumns[0]);
 				m_isH2ONode = true;
 				hasCoefficientColumn = true;
@@ -307,10 +303,12 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 						if (m_settings.getColName() != null && colName.contentEquals(m_settings.getColName())) {
 							containsTargetColumn = true;
 						}
-						if (m_settings.getXAxisVarColumn() != null && colName.contentEquals(m_settings.getXAxisVarColumn())) {
+						if (m_settings.getXAxisVarColumn() != null
+								&& colName.contentEquals(m_settings.getXAxisVarColumn())) {
 							containsXCol = true;
 						}
-						if (m_settings.getYAxisVarColumn() != null && colName.contentEquals(m_settings.getYAxisVarColumn())) {
+						if (m_settings.getYAxisVarColumn() != null
+								&& colName.contentEquals(m_settings.getYAxisVarColumn())) {
 							containsYCol = true;
 						}
 					}
@@ -340,7 +338,8 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	}
 
 	private DataColumnSpec createCalcValsOutputColumnSpec() {
-		DataColumnSpecCreator newColSpecCreator = new DataColumnSpecCreator("Calculated " + m_settings.getColName(), DoubleCell.TYPE);
+		DataColumnSpecCreator newColSpecCreator = new DataColumnSpecCreator("Calculated " + m_settings.getColName(),
+				DoubleCell.TYPE);
 		DataColumnSpec newColSpec = newColSpecCreator.createSpec();
 		return newColSpec;
 	}
@@ -357,11 +356,11 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 
 	@Override
 	protected void validateSettings(final NodeSettingsRO settings) throws InvalidSettingsException {
-		MVLRGraphSettings s = new MVLRGraphSettings();
-		
+		ScatterPlot3DSettings s = new ScatterPlot3DSettings();
+
 		s.loadSettingsFrom(settings);
-		
-		if(s.getColName() == null) {
+
+		if (s.getXAxisVarColumn() == null || s.getYAxisVarColumn() == null || s.getZAxisVarColumn() == null) {
 			throw new InvalidSettingsException("No target column selected");
 		}
 	}
@@ -369,7 +368,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	@Override
 	protected void loadInternals(final File internDir, final ExecutionMonitor exec)
 			throws IOException, CanceledExecutionException {
-		File file = new File(internDir, FILE_NAME);
+		File file = new File(internDir, ScatterPlot3DSettings.FILE_NAME);
 		try (FileInputStream fis = new FileInputStream(file)) {
 			ModelContentRO modelContent = ModelContent.loadFromXML(fis);
 			try {
@@ -422,10 +421,9 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 			modelContent.saveToXML(fos);
 		}
 	}
-	
-	public MVLRGraphSettings getSettings() {
+
+	public ScatterPlot3DSettings getSettings() {
 		return m_settings;
 	}
 
 }
-
