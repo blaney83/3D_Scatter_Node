@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.knime.base.node.io.filereader.InterruptedExecutionException;
+import org.knime.base.node.preproc.double2int.WarningMessage;
 import org.knime.core.data.DataCell;
 import org.knime.core.data.DataColumnDomainCreator;
 import org.knime.core.data.DataColumnSpec;
@@ -48,8 +49,8 @@ import org.knime.core.node.NodeSettingsWO;
  * @author Benjamin Laney
  */
 public class ScatterPlot3DNodeModel extends NodeModel {
-	//considerations:
-	//maybe include key for cluster colors
+	// considerations:
+	// maybe include key for cluster colors
 
 	ScatterPlot3DSettings m_settings = new ScatterPlot3DSettings();
 
@@ -218,122 +219,120 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	@Override
 	protected DataTableSpec[] configure(final DataTableSpec[] inSpecs) throws InvalidSettingsException {
 
-		if ( inSpecs[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT] == null) {
-			throw new InvalidSettingsException(
-					"Please provide a data table to In-Port #1.");
+		if (inSpecs[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT] == null) {
+			throw new InvalidSettingsException("Please provide a data table to In-Port #1.");
 		} else {
-			//validate three columns of double-compatible values inport 1
-			//if inport 2 exists, validate three columns of doubles
-			//if inport 2 exists, validate K-means (maybe)
-			//if inport 2 exists, validate matching columns between tables
-			//if inport 2 is valid, then setProvidedPrototypes = true
+			// validate three columns of double-compatible values inport 1
+			// validate only three matching columns
+			// if isClustered == true, then validate clusters column (throw error if not
+			// cluster column found for given type)
+			// maybe throw warning about correct numClusters and crash if incorrect...
+			// if clusterType = "k-means" and setProvidePrototypes = true, but inport 2 DNE,
+			// throw error
+			// else if k-means and inport 2 exists, setProvidedPrototypes = true
+			// if inport 2 exists, validate three columns of doubles
+			// validate matching columns selected and matching prototype columns
+			// if inport 2 exists, throw warning if not K-means (maybe)
+
+			int doubleCompatColCount = 0;
+			DataTableSpec mainTableSpec = inSpecs[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT];
+			String clusterType = m_settings.getClusterType();
+			boolean clusterColumnIdentified = false;
+			for (int i = 0; i < mainTableSpec.getNumColumns(); i++) {
+				if (mainTableSpec.getColumnSpec(i).getType().isCompatible(DoubleValue.class)) {
+					doubleCompatColCount++;
+				}
+				if (m_settings.getIsClustered()) {
+					switch (clusterType) {
+					case "K-Means":
+					case "DBSCAN":
+						if (mainTableSpec.getColumnSpec(i).getName().equals("Cluster")) {
+							clusterColumnIdentified = true;
+						}
+						break;
+					case "Fuzzy C-Means":
+						if (mainTableSpec.getColumnSpec(i).getName().equals("Winner Cluster")) {
+							clusterColumnIdentified = true;
+						}
+					default:
+						break;
+					}
+				}
+			}
+			if (doubleCompatColCount < 3) {
+				throw new InvalidSettingsException(
+						"The data table provided does not contain three numeric columns for plotting.");
+			}
+			if (!clusterColumnIdentified) {
+				throw new InvalidSettingsException(
+						"You have indicated that the data table has been previous clustered, but this node cannot"
+								+ " detect a cluster membership column. Please make sure you have correctly chosen the clustering method used during"
+								+ " that process. Currently this node supports K-Means, Fuzzy C-Means and DBSCAN clustered data from KNIME developed "
+								+ "clustering nodes. Compatiblity with other clustered data is currently not assured and should be used at your own "
+								+ "risk.");
+			}
+			if (m_settings.getIsClustered()) {
+				setWarningMessage(
+						"You have indicated that the data has been pre-clustered. Please ensure you correctly enter the number of clusters "
+								+ "calculated for the data set. If you are using DBSCAN clustering, do NOT include the noise cluster in your count.");
+			}
+			if ((!m_settings.getIsClustered()
+					|| (m_settings.getIsClustered() && !m_settings.getClusterType().equals("K-Means")))
+					&& inSpecs.length > 1) {
+				throw new InvalidSettingsException(
+						"You have provided a secondary prototype table for a data set that has not been identified as "
+								+ "having been clustered using a K-Means node. This is currently not supported. Please disconnect the data table from "
+								+ "In-Port #2");
+			}
 			
-			//I think thats it.... unless all settings validated here and then...
-			//validate only three matching columns
-			//if three columns and inport 2, validate matching columns selected and matching prototype columns
-			//if isClustered == true, then validate clusters column
-			//if prototypesProvided == true && clusterType == "k-means", then validate inport2
-			//maybe throw warning about correct numClusters and crash if incorrect...
-			//if dbscan clusterType, then handle "Noise" cluster
-			if (!inSpecs[COEFFICIENT_IN_PORT].containsCompatibleType(StringValue.class)
-					&& !inSpecs[COEFFICIENT_IN_PORT].containsCompatibleType(DoubleValue.class)) {
-				throw new InvalidSettingsException(
-						"The coefficient table provided does not meet the requirements for this node. It should contain at least a column containing the row keys (variables of the regression equation) in the associated data column and a numeric coefficients column.");
+			if (m_settings.getIsClustered() && m_settings.getClusterType().equals("K-Means") && m_settings.getPrototypesProvided() && inSpecs.length == 1) {
+				throw new InvalidSettingsException("You have indicated that you are providing a prototype table at In-Port 2, but one is not present. "
+						+ "Please provide the table generated by the K-Means node or change your preferences to reflect the absence of this table.");
 			}
 
-			if (m_settings.getColName() == null) {
-				throw new InvalidSettingsException("No target column selected");
-			}
-			// checking input ind. 0
-			boolean hasCoefficientColumn = false;
-			boolean hasVariableColumn = false;
-			String[] coeffTableColumns = inSpecs[COEFFICIENT_IN_PORT].getColumnNames();
-			// to be taken out if node expanded for polynomial regression
-			if (coeffTableColumns != null && coeffTableColumns.length > 1) {
-				for (String colName : coeffTableColumns) {
-					if (colName.toLowerCase().contains("exponent")) {
-						m_inPort1ExponentIndex = inSpecs[COEFFICIENT_IN_PORT].findColumnIndex(colName);
+			if (m_settings.getIsClustered() && m_settings.getClusterType().equals("K-Means") && inSpecs.length > 1) {
+				DataTableSpec prototypeTableSpec = inSpecs[ScatterPlot3DSettings.PROTOTYPE_TABLE_IN_PORT];
+				if(!m_settings.getPrototypesProvided()) {
+					m_settings.setPrototypesProvided(true);
+				}
+				if (prototypeTableSpec.getNumColumns() < 3) {
+					throw new InvalidSettingsException(
+							"The prototype table provided does not contain the minimum three columns for plotting.");
+				}
+				doubleCompatColCount = 0;
+				boolean containsXVar = false;
+				boolean containsYVar = false;
+				boolean containsZVar = false;
+				for (int i = 0; i < prototypeTableSpec.getNumColumns(); i++) {
+					if (prototypeTableSpec.getColumnSpec(i).getType().isCompatible(DoubleValue.class)) {
+						doubleCompatColCount++;
 					}
-					// alternately check for "coeff."
-					if (colName.toLowerCase().trim().equals("coeff.") && inSpecs[COEFFICIENT_IN_PORT]
-							.getColumnSpec(colName).getType().isCompatible(DoubleValue.class)) {
-						m_inPort1CoeffColumnIndex = inSpecs[COEFFICIENT_IN_PORT].findColumnIndex(colName);
-						hasCoefficientColumn = true;
-					}
-					if (colName.toLowerCase().trim().contains("variable") && inSpecs[COEFFICIENT_IN_PORT]
-							.getColumnSpec(colName).getType().isCompatible(StringValue.class)) {
-						m_inPort1VariableColumnIndex = inSpecs[COEFFICIENT_IN_PORT].findColumnIndex(colName);
-						hasVariableColumn = true;
+					switch (prototypeTableSpec.getColumnSpec(i).getName()) {
+						case m_settings.getXAxisVarColumn():
+							containsXVar = true;
+							break;
+						case m_settings.getYAxisVarColumn():
+							containsYVar = true;
+							break;
+						case m_settings.getZAxisVarColumn():
+							containsZVar = true;
+							break;
+						default:
+								break;
 					}
 				}
-			} else if (coeffTableColumns != null && // checking for H20 regression output
-					coeffTableColumns.length == 1 && coeffTableColumns[0].toLowerCase().trim().equals("beta")
-					&& inSpecs[COEFFICIENT_IN_PORT].getColumnSpec(coeffTableColumns[0]).getType()
-							.isCompatible(DoubleValue.class)) {
-
-				m_inPort1CoeffColumnIndex = inSpecs[COEFFICIENT_IN_PORT].findColumnIndex(coeffTableColumns[0]);
-				m_isH2ONode = true;
-				hasCoefficientColumn = true;
-				hasVariableColumn = true;
-			}
-			if (!hasCoefficientColumn) {
-				throw new InvalidSettingsException(
-						"Cannot find coefficient's from the provided table. Please make sure the coefficient table is connected to the top In-Port (0) and that the column containing coefficients is correctly named 'Coeff.'");
-			}
-			if (!hasVariableColumn) {
-				throw new InvalidSettingsException(
-						"Cannot find coefficient variables from the provided table. Please make sure the coefficient table is connected to the top In-Port (0) and that the column containing the associated column names from the data table (bottom In-Port (1)) is correctly named 'Variable'");
-			}
-			// checking input ind 1
-			boolean containsTargetColumn = false;
-			boolean containsXCol = false;
-			boolean containsYCol = false;
-			int numDataColumns = inSpecs[DATA_TABLE_IN_PORT].getNumColumns();
-			int numNumericColumns = 0;
-
-			m_dataTableColumnNames = new ArrayList<String>();
-
-			if (numDataColumns > 0) {
-				for (int i = 0; i < numDataColumns; i++) {
-					DataColumnSpec columnSpec = inSpecs[DATA_TABLE_IN_PORT].getColumnSpec(i);
-					String colName = columnSpec.getName();
-					m_dataTableColumnNames.add(colName);
-					if (columnSpec.getType().isCompatible(DoubleValue.class)) {
-						numNumericColumns++;
-						if (m_settings.getColName() != null && colName.contentEquals(m_settings.getColName())) {
-							containsTargetColumn = true;
-						}
-						if (m_settings.getXAxisVarColumn() != null
-								&& colName.contentEquals(m_settings.getXAxisVarColumn())) {
-							containsXCol = true;
-						}
-						if (m_settings.getYAxisVarColumn() != null
-								&& colName.contentEquals(m_settings.getYAxisVarColumn())) {
-							containsYCol = true;
-						}
-					}
+				if(doubleCompatColCount < 3) {
+					throw new InvalidSettingsException("The prototype table provided does not contain three numeric columns for plotting.");
+				}
+				if(!containsXVar ||
+						!containsYVar ||
+						!containsZVar) {
+					throw new InvalidSettingsException("The prototype table provided does not match the columns you selected to be plotted on "
+							+ "the graph. Please correct your column selections, your prototype settings, or change your settings to reflect the "
+							+ "absence of a compatible prototype table.");
 				}
 			}
-			if (numNumericColumns < 3) {
-				throw new InvalidSettingsException(
-						"The data table provided must contain 2 or more numeric columns which correspond to the variables in the regression equation and 1 numeric target column (same as was selected during regression learning).");
-			}
-
-			if (!containsTargetColumn) {
-				throw new InvalidSettingsException(
-						"You must select the column targeted in the Regression Learning Node for the target column.");
-			}
-			if (!containsXCol || !containsYCol) {
-				throw new InvalidSettingsException("You must select a numeric column for both axis.");
-			}
-			if (m_settings.getAppendColumn()) {
-				DataColumnSpec calcValsColumnSpec = createCalcValsOutputColumnSpec();
-				DataTableSpec appendSpec = new DataTableSpec(calcValsColumnSpec);
-				DataTableSpec outputSpec = new DataTableSpec(inSpecs[DATA_TABLE_IN_PORT], appendSpec);
-				return new DataTableSpec[] { outputSpec };
-			} else {
-				return new DataTableSpec[] { inSpecs[DATA_TABLE_IN_PORT] };
-			}
+			return new DataTableSpec[] {inSpecs[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT]};
 		}
 	}
 

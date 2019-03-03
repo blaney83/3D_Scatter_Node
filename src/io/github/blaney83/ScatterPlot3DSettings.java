@@ -51,9 +51,11 @@ public class ScatterPlot3DSettings {
 	// view configs
 	static final String CFGKEY_SHOW_ALL = "showAllData";
 	static final String CFGKEY_COUNT = "count";
+	static final String CFGKEY_DBSCAN_PLOT_NOISE_MEMBERS = "dbNoiseMembers";
 	static final String CFGKEY_DATA_POINT_SIZE = "pointSize";
 	static final String CFGKEY_PROTOTYPE_POINT_SIZE = "protoSize";
 	static final String CFGKEY_PROTOTYPE_POINT_COLOR = "protoColor";
+	static final String CFGKEY_DBSCAN_NOISE_MEMBER_COLOR = "dbNoiseColor";
 
 	// static internal defaults
 	static final boolean DEFAULT_PRE_CLUSTERED_DATA = false;
@@ -65,9 +67,12 @@ public class ScatterPlot3DSettings {
 	// view defaults
 	static final boolean DEFAULT_SHOW_ALL_DATA = false;
 	static final int DEFAULT_COUNT = 100;
+	static final boolean DEFAULT_DBSCAN_PLOT_NOISE_MEMBERS = true;
 	static final int DEFAULT_DATA_POINT_SIZE = 5;
 	static final int DEFAULT_PROTOTYPE_POINT_SIZE = 10;
 	static final Color DEFAULT_PROTOTYPE_POINT_COLOR = new Color(255, 255, 255);
+	static final Color DEFAULT_DBSCAN_NOISE_MEMBER_COLOR = new Color(255, 255, 255);
+
 
 	// settings model declarations
 	protected final SettingsModelColumnName m_xAxisVarColumn = new SettingsModelColumnName(CFGKEY_X_AXIS_VAR_COLUMN,
@@ -89,11 +94,13 @@ public class ScatterPlot3DSettings {
 			DEFAULT_SHOW_ALL_DATA);
 	private final SettingsModelIntegerBounded m_count = new SettingsModelIntegerBounded(CFGKEY_COUNT, DEFAULT_COUNT, 0,
 			Integer.MAX_VALUE);
+	private final SettingsModelBoolean m_dbscanPlotNoise = new SettingsModelBoolean(CFGKEY_DBSCAN_PLOT_NOISE_MEMBERS, DEFAULT_DBSCAN_PLOT_NOISE_MEMBERS);
 	protected final SettingsModelIntegerBounded m_dataPointSize = new SettingsModelIntegerBounded(
 			CFGKEY_DATA_POINT_SIZE, DEFAULT_DATA_POINT_SIZE, 1, Integer.MAX_VALUE);
 	protected final SettingsModelIntegerBounded m_prototypePointSize = new SettingsModelIntegerBounded(
 			CFGKEY_PROTOTYPE_POINT_SIZE, DEFAULT_PROTOTYPE_POINT_SIZE, 1, Integer.MAX_VALUE);
 	protected final SettingsModelColor m_prototypePointColor = new SettingsModelColor(CFGKEY_PROTOTYPE_POINT_COLOR, DEFAULT_PROTOTYPE_POINT_COLOR);
+	protected final SettingsModelColor m_dbNoiseMemberColor = new SettingsModelColor(CFGKEY_DBSCAN_NOISE_MEMBER_COLOR, DEFAULT_DBSCAN_NOISE_MEMBER_COLOR);
 	
 
 	@SuppressWarnings("unchecked")
@@ -114,9 +121,11 @@ public class ScatterPlot3DSettings {
 			
 			m_showAllData.setBooleanValue(settings.getBoolean(CFGKEY_SHOW_ALL));
 			m_count.setIntValue(settings.getInt(CFGKEY_COUNT));
+			m_dbscanPlotNoise.setBooleanValue(settings.getBoolean(CFGKEY_DBSCAN_PLOT_NOISE_MEMBERS));
 			m_dataPointSize.setIntValue(settings.getInt(CFGKEY_DATA_POINT_SIZE));
 			m_prototypePointSize.setIntValue(settings.getInt(CFGKEY_DATA_POINT_SIZE));
 			m_prototypePointColor.setColorValue(new Color(settings.getInt(CFGKEY_PROTOTYPE_POINT_COLOR)));
+			m_dbNoiseMemberColor.setColorValue(new Color(settings.getInt(CFGKEY_DBSCAN_NOISE_MEMBER_COLOR)));
 			
 		} catch (InvalidSettingsException e) {
 			throw new InvalidSettingsException("The internal settings for 3D Scatter Plot Node could not be successfully loaded. Please check the"
@@ -142,9 +151,11 @@ public class ScatterPlot3DSettings {
 			
 			settings.addBoolean(CFGKEY_SHOW_ALL, m_showAllData.getBooleanValue());
 			settings.addInt(CFGKEY_COUNT, m_count.getIntValue());
+			settings.addBoolean(CFGKEY_DBSCAN_PLOT_NOISE_MEMBERS, DEFAULT_DBSCAN_PLOT_NOISE_MEMBERS);
 			settings.addInt(CFGKEY_DATA_POINT_SIZE, m_dataPointSize.getIntValue());
 			settings.addInt(CFGKEY_PROTOTYPE_POINT_SIZE, m_prototypePointSize.getIntValue());
 			settings.addInt(CFGKEY_PROTOTYPE_POINT_COLOR, m_prototypePointColor.getColorValue().getRGB());
+			settings.addInt(CFGKEY_DBSCAN_NOISE_MEMBER_COLOR, m_dbNoiseMemberColor.getColorValue().getRGB());
 			m_filterConfiguration.saveConfiguration(settings);
 		}
 	}
@@ -201,6 +212,10 @@ public class ScatterPlot3DSettings {
 		this.m_count.setIntValue(count);
 	}
 	
+	public void setDBSCANPlotNoise(final boolean dbPlotNoise) {
+		this.m_dbscanPlotNoise.setBooleanValue(dbPlotNoise);
+	}
+	
 	public void setDataPointSize(final int dataPointSize) {
 		this.m_dataPointSize.setIntValue(dataPointSize);
 	}
@@ -211,6 +226,10 @@ public class ScatterPlot3DSettings {
 	
 	public void setPrototypePointColor(final Color prototypePointColor) {
 		this.m_prototypePointColor.setColorValue(prototypePointColor);
+	}
+	
+	public void setDBNoiseMemberColor(final Color dbNoiseMemberColor) {
+		this.m_dbNoiseMemberColor.setColorValue(dbNoiseMemberColor);
 	}
 	
 	// Getters
@@ -250,12 +269,20 @@ public class ScatterPlot3DSettings {
 		return this.m_count.getIntValue();
 	}
 	
+	public boolean getDBSCANPlotNoise() {
+		return this.m_dbscanPlotNoise.getBooleanValue();
+	}
+	
 	public int getDataPointSize() {
 		return this.m_dataPointSize.getIntValue();
 	}
 	
 	public Color getColorValue() {
 		return this.m_prototypePointColor.getColorValue();
+	}
+	
+	public Color getDBNoiseMemberColor() {
+		return this.m_dbNoiseMemberColor.getColorValue();
 	}
 	
 	public DataColumnSpecFilterConfiguration getFilterConfiguration() {
