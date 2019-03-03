@@ -61,18 +61,9 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	static final String INTERNAL_MODEL_TERM_KEY = "fnTerm";
 	static final String INTERNAL_MODEL_POINT_KEY = "calcPoint";
 
-	// INTERNAL NODE FIELDS
-	// model inter-method variables
-	private List<String> m_variableColNames;
-	private List<String> m_dataTableColumnNames;
-	private int m_inPort1VariableColumnIndex;
-	private int m_inPort1CoeffColumnIndex;
-	private int m_inPort1ExponentIndex = -1;
-	private boolean m_isH2ONode = false;
-
 	// view dependent fields
-	protected Set<FunctionTerm> m_termSet;
-	protected CalculatedPoint[] m_calcPoints;
+//	protected Set<FunctionTerm> m_termSet;
+//	protected CalculatedPoint[] m_calcPoints;
 
 	protected ScatterPlot3DNodeModel() {
 		super(2, 1);
@@ -82,138 +73,14 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	protected BufferedDataTable[] execute(final BufferedDataTable[] inData, final ExecutionContext exec)
 			throws Exception {
 
-		m_variableColNames = new ArrayList<String>();
-		m_termSet = new LinkedHashSet<FunctionTerm>();
-
-		BufferedDataTable coeffTable = inData[COEFFICIENT_IN_PORT];
-		for (DataRow row : coeffTable) {
-			m_termSet.add(validateCoeffVariables(row));
-		}
-		BufferedDataTable dataTable = inData[DATA_TABLE_IN_PORT];
-		Set<String> correctRegressionColumnsSelected = new LinkedHashSet<String>();
-
-		for (FunctionTerm fnTerm : m_termSet) {
-			if (fnTerm.getVarName().equals(m_settings.getXAxisVarColumn())
-					|| fnTerm.getVarName().equals(m_settings.getYAxisVarColumn())) {
-				correctRegressionColumnsSelected.add(fnTerm.getVarName());
-			}
-			processColumn(dataTable, fnTerm);
-		}
-		if (correctRegressionColumnsSelected.size() != 2) {
-			throw new InvalidSettingsException(
-					"The columns you chose do not match with the columns modeled by the Regression Model. "
-							+ "Please ensure the two selected columns were used in the creation of the Regression Equation.");
-		}
-
-		if (m_settings.getCount() > dataTable.size() || m_settings.getShowAllData()) {
-			m_settings.setCount((int) dataTable.size());
-		}
-
-		m_calcPoints = new CalculatedPoint[m_settings.getCount()];
-		int iterations = 0;
-		for (DataRow dataRow : dataTable) {
-			if (iterations >= m_settings.getCount()) {
-				break;
-			}
-			m_calcPoints[iterations] = pointFactory(dataRow, dataTable.getDataTableSpec());
-			iterations++;
-		}
-
 		BufferedDataTable bufferedOutput;
-		// calculate values anyways, so as to color points on graph accordingly
-		CellFactory cellFactory = new MVLRGraphCellFactory(createCalcValsOutputColumnSpec(),
-				inData[DATA_TABLE_IN_PORT].getDataTableSpec(), m_termSet, m_calcPoints);
-		ColumnRearranger outputTable = new ColumnRearranger(inData[DATA_TABLE_IN_PORT].getDataTableSpec());
-		outputTable.append(cellFactory);
-		bufferedOutput = exec.createColumnRearrangeTable(inData[DATA_TABLE_IN_PORT], outputTable, exec);
-		if (!m_settings.getAppendColumn()) {
-			bufferedOutput = exec.createBufferedDataTable(inData[DATA_TABLE_IN_PORT], exec);
-		}
+		bufferedOutput = exec.createBufferedDataTable(inData[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT], exec);
 		return new BufferedDataTable[] { bufferedOutput };
-	}
-
-	private FunctionTerm validateCoeffVariables(final DataRow dataRow) throws InterruptedExecutionException {
-		if (dataRow != null) {
-			double coeff = Double.parseDouble(dataRow.getCell(m_inPort1CoeffColumnIndex).toString());
-			int exponent = 1;
-			if (m_inPort1ExponentIndex != -1) {
-				exponent = Integer.parseInt(dataRow.getCell(m_inPort1ExponentIndex).toString());
-			}
-			if (!m_isH2ONode) {
-				String varName = dataRow.getCell(m_inPort1VariableColumnIndex).toString();
-				if (m_dataTableColumnNames.contains(varName) || varName.toLowerCase().trim().equals("intercept")) {
-					m_variableColNames.add(varName);
-					return new FunctionTerm(varName, coeff, exponent);
-				}
-			} else {
-				String rowKeyValue = dataRow.getKey().getString();
-				if (m_dataTableColumnNames.contains(rowKeyValue) || rowKeyValue.toLowerCase().trim() == "intercept") {
-					m_variableColNames.add(rowKeyValue);
-					return new FunctionTerm(rowKeyValue, coeff, exponent);
-				}
-			}
-			throw new InterruptedExecutionException(
-					"The coefficient table you provided does not match with the columns of the data table. Please ensure that the column names and variables fields have not been altered by a previous node AND your selected columns were used in the previous regression learner.");
-		}
-		return new FunctionTerm();
-	}
-
-	// may switch to iterating through columns 10 times for every 1000 rows, instead
-	// of
-	// 1000 rows for each of 10 columns
-	private void processColumn(final BufferedDataTable input, final FunctionTerm fnTerm) {
-		String colName = fnTerm.getVarName();
-		int colIndex = input.getDataTableSpec().findColumnIndex(colName);
-		if (colIndex > -1) {
-			double meanSum = 0;
-			double lowerBound = Double.MAX_VALUE;
-			double upperBound = Double.MIN_VALUE;
-			int totalRows = 0;
-			for (DataRow row : input) {
-				DataCell cell = row.getCell(colIndex);
-				double value = ((DoubleValue) cell).getDoubleValue();
-				meanSum += value;
-				lowerBound = Math.min(lowerBound, value);
-				upperBound = Math.max(upperBound, value);
-
-				totalRows++;
-			}
-			DataColumnDomainCreator colDomainCreator = new DataColumnDomainCreator();
-			colDomainCreator.setLowerBound(new DoubleCell(lowerBound));
-			colDomainCreator.setUpperBound(new DoubleCell(upperBound));
-			fnTerm.setDomain(colDomainCreator.createDomain());
-			if (!colName.equals(m_settings.getColName()) && !colName.equals(m_settings.getXAxisVarColumn())
-					&& !colName.equals(m_settings.getYAxisVarColumn())) {
-				fnTerm.setValue(meanSum / totalRows);
-			}
-		} else {
-			// handle intercept
-			fnTerm.setValue(1);
-			DataColumnDomainCreator colDomainCreator = new DataColumnDomainCreator();
-			colDomainCreator.setLowerBound(new DoubleCell(fnTerm.getCoefficient()));
-			colDomainCreator.setUpperBound(new DoubleCell(fnTerm.getCoefficient()));
-			fnTerm.setDomain(colDomainCreator.createDomain());
-		}
-	}
-
-	private CalculatedPoint pointFactory(final DataRow dataRow, final DataTableSpec tableSpec) {
-		int targetIndex = tableSpec.findColumnIndex(m_settings.getColName());
-		int xIndex = tableSpec.findColumnIndex(m_settings.getXAxisVarColumn());
-		int yIndex = tableSpec.findColumnIndex(m_settings.getYAxisVarColumn());
-		double xValue = ((DoubleValue) dataRow.getCell(xIndex)).getDoubleValue();
-		double yValue = ((DoubleValue) dataRow.getCell(yIndex)).getDoubleValue();
-		double outPutValue = ((DoubleValue) dataRow.getCell(targetIndex)).getDoubleValue();
-		return new CalculatedPoint(xValue, yValue, outPutValue, dataRow.getKey());
 	}
 
 	@Override
 	protected void reset() {
-		if (m_termSet != null) {
-			m_termSet = null;
-		}
-		if (m_calcPoints != null) {
-			m_calcPoints = null;
-		}
+		//do nothing
 	}
 
 	@Override
@@ -282,17 +149,19 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 				throw new InvalidSettingsException(
 						"You have provided a secondary prototype table for a data set that has not been identified as "
 								+ "having been clustered using a K-Means node. This is currently not supported. Please disconnect the data table from "
-								+ "In-Port #2");
+								+ "In-Port #2 or correctly select the 'K-Means' cluster type from the options.");
 			}
-			
-			if (m_settings.getIsClustered() && m_settings.getClusterType().equals("K-Means") && m_settings.getPrototypesProvided() && inSpecs.length == 1) {
-				throw new InvalidSettingsException("You have indicated that you are providing a prototype table at In-Port 2, but one is not present. "
-						+ "Please provide the table generated by the K-Means node or change your preferences to reflect the absence of this table.");
+
+			if (m_settings.getIsClustered() && m_settings.getClusterType().equals("K-Means")
+					&& m_settings.getPrototypesProvided() && inSpecs.length == 1) {
+				throw new InvalidSettingsException(
+						"You have indicated that you are providing a prototype table at In-Port 2, but one is not present. "
+								+ "Please provide the table generated by the K-Means node or change your preferences to reflect the absence of this table.");
 			}
 
 			if (m_settings.getIsClustered() && m_settings.getClusterType().equals("K-Means") && inSpecs.length > 1) {
 				DataTableSpec prototypeTableSpec = inSpecs[ScatterPlot3DSettings.PROTOTYPE_TABLE_IN_PORT];
-				if(!m_settings.getPrototypesProvided()) {
+				if (!m_settings.getPrototypesProvided()) {
 					m_settings.setPrototypesProvided(true);
 				}
 				if (prototypeTableSpec.getNumColumns() < 3) {
@@ -303,45 +172,40 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 				boolean containsXVar = false;
 				boolean containsYVar = false;
 				boolean containsZVar = false;
+				String xVar = m_settings.getXAxisVarColumn();
 				for (int i = 0; i < prototypeTableSpec.getNumColumns(); i++) {
 					if (prototypeTableSpec.getColumnSpec(i).getType().isCompatible(DoubleValue.class)) {
 						doubleCompatColCount++;
 					}
-					switch (prototypeTableSpec.getColumnSpec(i).getName()) {
-						case m_settings.getXAxisVarColumn():
-							containsXVar = true;
-							break;
-						case m_settings.getYAxisVarColumn():
-							containsYVar = true;
-							break;
-						case m_settings.getZAxisVarColumn():
-							containsZVar = true;
-							break;
-						default:
-								break;
+					if(prototypeTableSpec.getColumnSpec(i).getName().equals(m_settings.getXAxisVarColumn())) {
+						containsXVar = true;
+					}else if(prototypeTableSpec.getColumnSpec(i).getName().equals(m_settings.getYAxisVarColumn())) {
+						containsYVar = true;
+					}else if(prototypeTableSpec.getColumnSpec(i).getName().equals(m_settings.getZAxisVarColumn())) {
+						containsZVar = true;
 					}
 				}
-				if(doubleCompatColCount < 3) {
-					throw new InvalidSettingsException("The prototype table provided does not contain three numeric columns for plotting.");
+				if (doubleCompatColCount < 3) {
+					throw new InvalidSettingsException(
+							"The prototype table provided does not contain three numeric columns for plotting.");
 				}
-				if(!containsXVar ||
-						!containsYVar ||
-						!containsZVar) {
-					throw new InvalidSettingsException("The prototype table provided does not match the columns you selected to be plotted on "
-							+ "the graph. Please correct your column selections, your prototype settings, or change your settings to reflect the "
-							+ "absence of a compatible prototype table.");
+				if (!containsXVar || !containsYVar || !containsZVar) {
+					throw new InvalidSettingsException(
+							"The prototype table provided does not match the columns you selected to be plotted on "
+									+ "the graph. Please correct your column selections, your prototype settings, or change your settings to reflect the "
+									+ "absence of a compatible prototype table.");
 				}
 			}
-			return new DataTableSpec[] {inSpecs[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT]};
+			return new DataTableSpec[] { inSpecs[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT] };
 		}
 	}
 
-	private DataColumnSpec createCalcValsOutputColumnSpec() {
-		DataColumnSpecCreator newColSpecCreator = new DataColumnSpecCreator("Calculated " + m_settings.getColName(),
-				DoubleCell.TYPE);
-		DataColumnSpec newColSpec = newColSpecCreator.createSpec();
-		return newColSpec;
-	}
+//	private DataColumnSpec createCalcValsOutputColumnSpec() {
+//		DataColumnSpecCreator newColSpecCreator = new DataColumnSpecCreator("Calculated " + m_settings.getColName(),
+//				DoubleCell.TYPE);
+//		DataColumnSpec newColSpec = newColSpecCreator.createSpec();
+//		return newColSpec;
+//	}
 
 	@Override
 	protected void saveSettingsTo(final NodeSettingsWO settings) {
@@ -370,28 +234,28 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 		File file = new File(internDir, ScatterPlot3DSettings.FILE_NAME);
 		try (FileInputStream fis = new FileInputStream(file)) {
 			ModelContentRO modelContent = ModelContent.loadFromXML(fis);
-			try {
-				int numFnTerms = modelContent.getInt(INTERNAL_MODEL_NUM_FUNCTION_TERM_KEY);
-				int numCalcPoints = modelContent.getInt(INTERNAL_MODEL_NUM_CALC_POINT_KEY);
-				m_termSet = new LinkedHashSet<FunctionTerm>();
-				m_calcPoints = new CalculatedPoint[numCalcPoints];
-				for (int i = 0; i < numFnTerms; i++) {
-					FunctionTerm newTerm = new FunctionTerm();
-					ModelContentRO subContent = modelContent.getModelContent(INTERNAL_MODEL_TERM_KEY + i);
-					newTerm.loadFrom(subContent);
-					m_termSet.add(newTerm);
-				}
-
-				for (int i = 0; i < numCalcPoints; i++) {
-					CalculatedPoint newPoint = new CalculatedPoint();
-					ModelContentRO subContent = modelContent.getModelContent(INTERNAL_MODEL_POINT_KEY + i);
-					newPoint.loadFrom(subContent);
-					m_calcPoints[i] = newPoint;
-				}
-
-			} catch (InvalidSettingsException e) {
-				throw new IOException("There was a problem loading the internal state of this node.");
-			}
+//			try {
+//				int numFnTerms = modelContent.getInt(INTERNAL_MODEL_NUM_FUNCTION_TERM_KEY);
+//				int numCalcPoints = modelContent.getInt(INTERNAL_MODEL_NUM_CALC_POINT_KEY);
+//				m_termSet = new LinkedHashSet<FunctionTerm>();
+//				m_calcPoints = new CalculatedPoint[numCalcPoints];
+//				for (int i = 0; i < numFnTerms; i++) {
+//					FunctionTerm newTerm = new FunctionTerm();
+//					ModelContentRO subContent = modelContent.getModelContent(INTERNAL_MODEL_TERM_KEY + i);
+//					newTerm.loadFrom(subContent);
+//					m_termSet.add(newTerm);
+//				}
+//
+//				for (int i = 0; i < numCalcPoints; i++) {
+//					CalculatedPoint newPoint = new CalculatedPoint();
+//					ModelContentRO subContent = modelContent.getModelContent(INTERNAL_MODEL_POINT_KEY + i);
+//					newPoint.loadFrom(subContent);
+//					m_calcPoints[i] = newPoint;
+//				}
+//
+//			} catch (InvalidSettingsException e) {
+//				throw new IOException("There was a problem loading the internal state of this node.");
+//			}
 
 		}
 	}
@@ -399,26 +263,26 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	@Override
 	protected void saveInternals(final File internDir, final ExecutionMonitor exec)
 			throws IOException, CanceledExecutionException {
-		if (m_termSet != null && m_calcPoints != null) {
-			ModelContent modelContent = new ModelContent(INTERNAL_MODEL_NAME_KEY);
-			modelContent.addInt(INTERNAL_MODEL_NUM_FUNCTION_TERM_KEY, m_termSet.size());
-			modelContent.addInt(INTERNAL_MODEL_NUM_CALC_POINT_KEY, m_calcPoints.length);
-			int count = 0;
-			for (FunctionTerm fnTerm : m_termSet) {
-				ModelContentWO subContentWO = modelContent.addModelContent(INTERNAL_MODEL_TERM_KEY + count);
-				fnTerm.saveTo(subContentWO);
-				count++;
-			}
-			count = 0;
-			for (CalculatedPoint calcPoint : m_calcPoints) {
-				ModelContentWO subContentWO = modelContent.addModelContent(INTERNAL_MODEL_POINT_KEY + count);
-				calcPoint.saveTo(subContentWO);
-				count++;
-			}
-			File file = new File(internDir, FILE_NAME);
-			FileOutputStream fos = new FileOutputStream(file);
-			modelContent.saveToXML(fos);
-		}
+//		if (m_termSet != null && m_calcPoints != null) {
+//			ModelContent modelContent = new ModelContent(INTERNAL_MODEL_NAME_KEY);
+//			modelContent.addInt(INTERNAL_MODEL_NUM_FUNCTION_TERM_KEY, m_termSet.size());
+//			modelContent.addInt(INTERNAL_MODEL_NUM_CALC_POINT_KEY, m_calcPoints.length);
+//			int count = 0;
+//			for (FunctionTerm fnTerm : m_termSet) {
+//				ModelContentWO subContentWO = modelContent.addModelContent(INTERNAL_MODEL_TERM_KEY + count);
+//				fnTerm.saveTo(subContentWO);
+//				count++;
+//			}
+//			count = 0;
+//			for (CalculatedPoint calcPoint : m_calcPoints) {
+//				ModelContentWO subContentWO = modelContent.addModelContent(INTERNAL_MODEL_POINT_KEY + count);
+//				calcPoint.saveTo(subContentWO);
+//				count++;
+//			}
+//			File file = new File(internDir, FILE_NAME);
+//			FileOutputStream fos = new FileOutputStream(file);
+//			modelContent.saveToXML(fos);
+//		}
 	}
 
 	public ScatterPlot3DSettings getSettings() {

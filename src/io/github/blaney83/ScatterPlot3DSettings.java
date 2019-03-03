@@ -72,7 +72,8 @@ public class ScatterPlot3DSettings {
 	static final int DEFAULT_PROTOTYPE_POINT_SIZE = 10;
 	static final Color DEFAULT_PROTOTYPE_POINT_COLOR = new Color(255, 255, 255);
 	static final Color DEFAULT_DBSCAN_NOISE_MEMBER_COLOR = new Color(255, 255, 255);
-
+	static final int PANEL_WIDTH = 800;
+	static final int PANEL_HEIGHT = 650;
 
 	// settings model declarations
 	protected final SettingsModelColumnName m_xAxisVarColumn = new SettingsModelColumnName(CFGKEY_X_AXIS_VAR_COLUMN,
