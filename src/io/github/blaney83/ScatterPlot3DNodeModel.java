@@ -2,42 +2,19 @@ package io.github.blaney83;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
 
-import org.knime.base.node.io.filereader.InterruptedExecutionException;
-import org.knime.base.node.preproc.double2int.WarningMessage;
-import org.knime.core.data.DataCell;
-import org.knime.core.data.DataColumnDomainCreator;
-import org.knime.core.data.DataColumnSpec;
-import org.knime.core.data.DataColumnSpecCreator;
+import org.jzy3d.colors.Color;
+import org.jzy3d.maths.Coord3d;
 import org.knime.core.data.DataRow;
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DoubleValue;
-import org.knime.core.data.RowKey;
-import org.knime.core.data.StringValue;
-import org.knime.core.data.container.CellFactory;
-import org.knime.core.data.container.ColumnRearranger;
-import org.knime.core.data.def.DefaultRow;
-import org.knime.core.data.def.DoubleCell;
-import org.knime.core.data.def.IntCell;
-import org.knime.core.data.def.StringCell;
-import org.knime.core.node.BufferedDataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
-import org.knime.core.node.defaultnodesettings.SettingsModelIntegerBounded;
 
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.ModelContent;
-import org.knime.core.node.ModelContentRO;
-import org.knime.core.node.ModelContentWO;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
@@ -51,6 +28,9 @@ import org.knime.core.node.NodeSettingsWO;
 public class ScatterPlot3DNodeModel extends NodeModel {
 	// considerations:
 	// maybe include key for cluster colors
+	// maybe include settings for point transparency (alpha)
+	// maybe add settings for prototype color and size
+	// maybe use color mapper for points w/o clustering
 
 	ScatterPlot3DSettings m_settings = new ScatterPlot3DSettings();
 
@@ -62,8 +42,20 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	static final String INTERNAL_MODEL_POINT_KEY = "calcPoint";
 
 	// view dependent fields
-//	protected Set<FunctionTerm> m_termSet;
-//	protected CalculatedPoint[] m_calcPoints;
+	private Coord3d[] m_dataPoints;
+	private Color[] m_dataPointColors;
+	private short[] m_dataPointColorIndicies;
+	private Coord3d[] m_protoTypePoints;
+
+
+	private int m_xColIndex = -1;
+	private int m_yColIndex = -1;
+	private int m_zColIndex = -1;
+	private int m_clusterColumnIndex = -1;
+	
+	private int m_xColProtoIndex = -1;
+	private int m_yColProtoIndex = -1;
+	private int m_zColProtoIndex = -1;
 
 	protected ScatterPlot3DNodeModel() {
 		super(2, 1);
@@ -72,15 +64,105 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	@Override
 	protected BufferedDataTable[] execute(final BufferedDataTable[] inData, final ExecutionContext exec)
 			throws Exception {
-
+		coordPointFactory(inData);
 		BufferedDataTable bufferedOutput;
 		bufferedOutput = exec.createBufferedDataTable(inData[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT], exec);
 		return new BufferedDataTable[] { bufferedOutput };
 	}
 
+	private void coordPointFactory(final BufferedDataTable[] inData)
+			throws InvalidSettingsException, IndexOutOfBoundsException {
+		BufferedDataTable mainDataTable = inData[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT];
+		int numPoints = m_settings.getCount();
+		int totalPointsCreated = 0;
+		if (m_settings.getShowAllData()) {
+			numPoints = (int) mainDataTable.size();
+		}
+		m_dataPoints = new Coord3d[numPoints];
+		m_dataPointColorIndicies = new short[numPoints];
+		int numColors = 1;
+		if (m_settings.getIsClustered()) {
+			numColors = m_settings.getNumClusters();
+			if (m_settings.getClusterType().equals("DBSCAN") && m_settings.getDBSCANPlotNoise()) {
+				numColors++;
+			}
+		}
+		m_dataPointColors = new Color[numColors];
+		int dynamicColorValue = 255 / numColors + 1;
+		for (int i = 0; i < numColors; i++) {
+			if (i == numColors - 1 && m_settings.getClusterType().equals("DBSCAN")) {
+				m_dataPointColors[i] = new Color(m_settings.getDBNoiseMemberColor().getRed(),
+						m_settings.getDBNoiseMemberColor().getBlue(), m_settings.getDBNoiseMemberColor().getGreen(),
+						m_settings.getDBNoiseMemberColor().getAlpha());
+				break;
+			}
+			m_dataPointColors[i] = new Color(dynamicColorValue * (i + 1), dynamicColorValue * (i + 1),
+					dynamicColorValue * (i + 1));
+		}
+
+		for (DataRow row : mainDataTable) {
+			if (totalPointsCreated >= numPoints) {
+				break;
+			}
+			if (!m_settings.getIsClustered()) {
+				m_dataPoints[totalPointsCreated] = new Coord3d(Double.valueOf(row.getCell(m_xColIndex).toString()),
+						Double.valueOf(row.getCell(m_yColIndex).toString()),
+						Double.valueOf(row.getCell(m_zColIndex).toString()));
+				m_dataPointColorIndicies[totalPointsCreated] = 0;
+			}else {
+				if (m_settings.getIsClustered() && m_clusterColumnIndex > -1) {
+					String[] clusterMembership = row.getCell(m_clusterColumnIndex).toString().toLowerCase().split("_");
+					if(m_settings.getClusterType().equals("DBSCAN")) {
+						if(!m_settings.getDBSCANPlotNoise()) {
+							if(clusterMembership.length == 1) {
+								totalPointsCreated ++;
+								continue;
+							}
+							m_dataPoints[totalPointsCreated] = new Coord3d(Double.valueOf(row.getCell(m_xColIndex).toString()),
+									Double.valueOf(row.getCell(m_yColIndex).toString()),
+									Double.valueOf(row.getCell(m_zColIndex).toString()));
+							m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(clusterMembership[1]);
+						} else {
+							if(clusterMembership.length == 1) {
+								m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(String.valueOf((m_dataPointColorIndicies.length-1)));
+							} else {
+								m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(clusterMembership[1]);
+							}
+							m_dataPoints[totalPointsCreated] = new Coord3d(Double.valueOf(row.getCell(m_xColIndex).toString()),
+									Double.valueOf(row.getCell(m_yColIndex).toString()),
+									Double.valueOf(row.getCell(m_zColIndex).toString()));
+						}
+					}else {
+						m_dataPoints[totalPointsCreated] = new Coord3d(Double.valueOf(row.getCell(m_xColIndex).toString()),
+								Double.valueOf(row.getCell(m_yColIndex).toString()),
+								Double.valueOf(row.getCell(m_zColIndex).toString()));
+						m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(clusterMembership[1]);
+					}
+				} else if (m_settings.getIsClustered() && m_clusterColumnIndex == -1) {
+					throw new InvalidSettingsException(
+							"Cluster memberships could not be determined at runtime. Please reconfigure node");
+				}
+			}
+			totalPointsCreated++;
+		}
+		
+		if(inData.length > 1 && m_settings.getPrototypesProvided()) {
+			BufferedDataTable prototypeTable = inData[ScatterPlot3DSettings.PROTOTYPE_TABLE_IN_PORT];
+			//could use user provided cluster number and catch errors, but using ProtoTable size instead
+			int trueClusterNumber = (int) prototypeTable.size();
+			m_protoTypePoints = new Coord3d[trueClusterNumber];
+			int count = 0;
+			for(DataRow row : prototypeTable) {
+				m_protoTypePoints[count] = new Coord3d(Double.valueOf(row.getCell(m_xColProtoIndex).toString()),
+						Double.valueOf(row.getCell(m_yColProtoIndex).toString()),
+						Double.valueOf(row.getCell(m_zColProtoIndex).toString()));
+			}
+		}
+	}
+
 	@Override
 	protected void reset() {
-		//do nothing
+		// do nothing
 	}
 
 	@Override
@@ -115,15 +197,24 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 					case "DBSCAN":
 						if (mainTableSpec.getColumnSpec(i).getName().equals("Cluster")) {
 							clusterColumnIdentified = true;
+							m_clusterColumnIndex = i;
 						}
 						break;
 					case "Fuzzy C-Means":
 						if (mainTableSpec.getColumnSpec(i).getName().equals("Winner Cluster")) {
 							clusterColumnIdentified = true;
+							m_clusterColumnIndex = i;
 						}
 					default:
 						break;
 					}
+				}
+				if (mainTableSpec.getColumnSpec(i).getName().equals(m_settings.getXAxisVarColumn())) {
+					m_xColIndex = i;
+				} else if (mainTableSpec.getColumnSpec(i).getName().equals(m_settings.getYAxisVarColumn())) {
+					m_yColIndex = i;
+				} else if (mainTableSpec.getColumnSpec(i).getName().equals(m_settings.getZAxisVarColumn())) {
+					m_zColIndex = i;
 				}
 			}
 			if (doubleCompatColCount < 3) {
@@ -137,6 +228,12 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 								+ " that process. Currently this node supports K-Means, Fuzzy C-Means and DBSCAN clustered data from KNIME developed "
 								+ "clustering nodes. Compatiblity with other clustered data is currently not assured and should be used at your own "
 								+ "risk.");
+			}
+			// should never happen, but check for good practice
+			if (m_xColIndex == -1 || m_yColIndex == -1 || m_zColIndex == -1) {
+				throw new InvalidSettingsException(
+						"The columns you selected could not be found in the table. Please reset the node or delete, recreate, and "
+								+ "reconfigure the node.");
 			}
 			if (m_settings.getIsClustered()) {
 				setWarningMessage(
@@ -172,17 +269,19 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 				boolean containsXVar = false;
 				boolean containsYVar = false;
 				boolean containsZVar = false;
-				String xVar = m_settings.getXAxisVarColumn();
 				for (int i = 0; i < prototypeTableSpec.getNumColumns(); i++) {
 					if (prototypeTableSpec.getColumnSpec(i).getType().isCompatible(DoubleValue.class)) {
 						doubleCompatColCount++;
 					}
-					if(prototypeTableSpec.getColumnSpec(i).getName().equals(m_settings.getXAxisVarColumn())) {
+					if (prototypeTableSpec.getColumnSpec(i).getName().equals(m_settings.getXAxisVarColumn())) {
 						containsXVar = true;
-					}else if(prototypeTableSpec.getColumnSpec(i).getName().equals(m_settings.getYAxisVarColumn())) {
+						m_xColProtoIndex = i;
+					} else if (prototypeTableSpec.getColumnSpec(i).getName().equals(m_settings.getYAxisVarColumn())) {
 						containsYVar = true;
-					}else if(prototypeTableSpec.getColumnSpec(i).getName().equals(m_settings.getZAxisVarColumn())) {
+						m_yColProtoIndex = i;
+					} else if (prototypeTableSpec.getColumnSpec(i).getName().equals(m_settings.getZAxisVarColumn())) {
 						containsZVar = true;
+						m_zColProtoIndex = i;
 					}
 				}
 				if (doubleCompatColCount < 3) {
@@ -199,13 +298,6 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 			return new DataTableSpec[] { inSpecs[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT] };
 		}
 	}
-
-//	private DataColumnSpec createCalcValsOutputColumnSpec() {
-//		DataColumnSpecCreator newColSpecCreator = new DataColumnSpecCreator("Calculated " + m_settings.getColName(),
-//				DoubleCell.TYPE);
-//		DataColumnSpec newColSpec = newColSpecCreator.createSpec();
-//		return newColSpec;
-//	}
 
 	@Override
 	protected void saveSettingsTo(final NodeSettingsWO settings) {
@@ -233,7 +325,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 			throws IOException, CanceledExecutionException {
 		File file = new File(internDir, ScatterPlot3DSettings.FILE_NAME);
 		try (FileInputStream fis = new FileInputStream(file)) {
-			ModelContentRO modelContent = ModelContent.loadFromXML(fis);
+//			ModelContentRO modelContent = ModelContent.loadFromXML(fis);
 //			try {
 //				int numFnTerms = modelContent.getInt(INTERNAL_MODEL_NUM_FUNCTION_TERM_KEY);
 //				int numCalcPoints = modelContent.getInt(INTERNAL_MODEL_NUM_CALC_POINT_KEY);
@@ -285,8 +377,23 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 //		}
 	}
 
-	public ScatterPlot3DSettings getSettings() {
+	protected ScatterPlot3DSettings getSettings() {
 		return m_settings;
 	}
 
+	protected Coord3d[] getDataPoints() {
+		return m_dataPoints;
+	}
+	
+	protected Color[] getDataPointColors() {
+		return m_dataPointColors;
+	}
+	
+	protected short[] getDataPointColorIndicies() {
+		return m_dataPointColorIndicies;
+	}
+	
+	protected Coord3d[] getProtoTypePoints() {
+		return m_protoTypePoints;
+	}
 }
