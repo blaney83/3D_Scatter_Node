@@ -31,7 +31,10 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	// maybe include settings for point transparency (alpha)
 	// maybe add settings for prototype color and size
 	// maybe use color mapper for points w/o clustering
-
+	// should be handling or catching mis-matched numClusters before they get to Graph
+	// fix combo box options
+	// make input 2 optional
+	
 	ScatterPlot3DSettings m_settings = new ScatterPlot3DSettings();
 
 	// save/load cfg keys
@@ -88,7 +91,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 			}
 		}
 		m_dataPointColors = new Color[numColors];
-		int dynamicColorValue = 255 / numColors + 1;
+		int dynamicColorValue = 200 / (numColors + 1);
 		for (int i = 0; i < numColors; i++) {
 			if (i == numColors - 1 && m_settings.getClusterType().equals("DBSCAN")) {
 				m_dataPointColors[i] = new Color(m_settings.getDBNoiseMemberColor().getRed(),
@@ -96,8 +99,8 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 						m_settings.getDBNoiseMemberColor().getAlpha());
 				break;
 			}
-			m_dataPointColors[i] = new Color(dynamicColorValue * (i + 1), dynamicColorValue * (i + 1),
-					dynamicColorValue * (i + 1));
+			m_dataPointColors[i] = new Color((dynamicColorValue * (i + 1))+ 55, (dynamicColorValue * ((numColors-1)*i) + 55),
+					255);
 		}
 
 		for (DataRow row : mainDataTable) {
@@ -156,13 +159,25 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 				m_protoTypePoints[count] = new Coord3d(Double.valueOf(row.getCell(m_xColProtoIndex).toString()),
 						Double.valueOf(row.getCell(m_yColProtoIndex).toString()),
 						Double.valueOf(row.getCell(m_zColProtoIndex).toString()));
+				count ++;
 			}
 		}
 	}
 
 	@Override
 	protected void reset() {
-		// do nothing
+		if(m_dataPoints != null) {
+			m_dataPoints = null;
+		}
+		if(m_dataPointColorIndicies != null) {
+			m_dataPointColorIndicies = null;
+		}
+		if(m_dataPointColors != null) {
+			m_dataPointColors = null;
+		}
+		if(m_protoTypePoints != null) {
+			m_protoTypePoints = null;
+		}
 	}
 
 	@Override
@@ -393,7 +408,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 		return m_dataPointColorIndicies;
 	}
 	
-	protected Coord3d[] getProtoTypePoints() {
+	protected Coord3d[] getPrototypePoints() {
 		return m_protoTypePoints;
 	}
 }

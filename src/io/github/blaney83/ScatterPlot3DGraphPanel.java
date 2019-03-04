@@ -1,8 +1,11 @@
 package io.github.blaney83;
 
 import org.jzy3d.analysis.AbstractAnalysis;
+import org.jzy3d.chart.factories.AWTChartComponentFactory;
 import org.jzy3d.colors.Color;
+import org.jzy3d.maths.Coord3d;
 import org.jzy3d.plot3d.primitives.Scatter;
+import org.jzy3d.plot3d.rendering.canvas.Quality;
 
 
 public class ScatterPlot3DGraphPanel extends AbstractAnalysis {
@@ -16,20 +19,28 @@ public class ScatterPlot3DGraphPanel extends AbstractAnalysis {
 
 	@Override
 	public void init() {
-		
+		//this chunkVVVVVVVV
 		Color[] pointColors = new Color[m_nodeModel.getDataPointColorIndicies().length];
 		int count = 0;
 		for(Short index: m_nodeModel.getDataPointColorIndicies()) {
 			pointColors[count] = m_nodeModel.getDataPointColors()[(int) index];
 			count ++;
 		}
-		
-		Scatter scatter = new Scatter(m_nodeModel.getDataPoints(), m_nodeModel.getDataPointColors());
+		//^^^^^^^^^^^^^^^ should be moved to NodeModel
+		chart = AWTChartComponentFactory.chart(Quality.Advanced, getCanvasType());
+		Scatter scatter = new Scatter(m_nodeModel.getDataPoints(), pointColors);
 		scatter.setWidth(m_nodeModel.getSettings().getDataPointSize());
 		chart.getScene().getGraph().add(scatter);
 		if(m_nodeModel.getSettings().getPrototypesProvided()) {
-			Scatter protoScatter = new Scatter(m_nodeModel.getProtoTypePoints(), new Color(255, 255, 255));
-			protoScatter.setWidth(10);
+			Color protoColor = new Color(m_nodeModel.getSettings().getPrototypePointColor().getRed(), 
+					m_nodeModel.getSettings().getPrototypePointColor().getGreen(), 
+					m_nodeModel.getSettings().getPrototypePointColor().getBlue(),
+					m_nodeModel.getSettings().getPrototypePointColor().getAlpha());
+			for(Coord3d coord : m_nodeModel.getPrototypePoints()) {
+				System.out.println(coord.toString());
+			}
+			Scatter protoScatter = new Scatter(m_nodeModel.getPrototypePoints(), protoColor);
+			protoScatter.setWidth(m_nodeModel.getSettings().getPrototypePointSize());
 			chart.getScene().getGraph().add(protoScatter);
 		}
 		chart.getAxeLayout().setXAxeLabel(m_nodeModel.getSettings().getXAxisVarColumn());

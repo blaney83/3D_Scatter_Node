@@ -5,7 +5,9 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.LinkedHashSet;
 
+import javax.swing.ComboBoxModel;
 import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
@@ -15,13 +17,18 @@ import javax.swing.JSeparator;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
+import javax.swing.event.ListDataListener;
 
+import org.knime.core.data.DataColumnSpec;
 import org.knime.core.data.DataTableSpec;
+import org.knime.core.data.DoubleValue;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeDialogPane;
+import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
+import org.knime.core.node.util.filter.column.DataColumnSpecFilterConfiguration;
 import org.knime.core.node.util.filter.column.DataColumnSpecFilterPanel;
 
 /**
@@ -55,11 +62,48 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 			ScatterPlot3DSettings.DEFAULT_DBSCAN_NOISE_MEMBER_COLOR);
 
 	protected ScatterPlot3DNodeDialog() {
+		ComboBoxModel<String[]> comboBoxModel = new ComboBoxModel<String[]>() {
 
-		m_clusterType.addItem(ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY);
+			private int currentSelected = 0;
 
-		m_colSelectionPanel.setIncludeTitle("X and Y Axis Variables (exactly 2)");
-		m_colSelectionPanel.setExcludeTitle("Set to Mean/Excluded from Model");
+			@Override
+			public int getSize() {
+				return ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY.length;
+			}
+
+			@Override
+			public String[] getElementAt(int index) {
+				return new String[] { ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY[index] };
+			}
+
+			@Override
+			public void addListDataListener(ListDataListener l) {
+			}
+
+			@Override
+			public void removeListDataListener(ListDataListener l) {
+			}
+
+			@Override
+			public void setSelectedItem(Object anItem) {
+				int count = 0;
+				for (String clusterType : ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY) {
+					if (clusterType.equals(anItem.toString())) {
+						currentSelected = count;
+					}
+					count++;
+				}
+			}
+
+			@Override
+			public Object getSelectedItem() {
+				return ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY[currentSelected];
+			}
+		};
+		m_clusterType.setModel(comboBoxModel);
+
+		m_colSelectionPanel.setIncludeTitle("Choose three columns (X, Y, Z)");
+		m_colSelectionPanel.setExcludeTitle("Excluded from model");
 
 		JPanel panel = new JPanel(new GridBagLayout());
 
@@ -238,33 +282,44 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 	@Override
 	protected void loadSettingsFrom(NodeSettingsRO settings, DataTableSpec[] specs) throws NotConfigurableException {
 		// rework w/ testing
-//		DataTableSpec tableSpec = specs[ScatterPlot3DNodeModel.DATA_TABLE_IN_PORT];
-//		try {
-//			m_settings.loadSettingsInDialog(settings, tableSpec);
-//		}catch(Exception e) {
-//			LinkedHashSet<String> inclSet = new LinkedHashSet<String>();
-//			for(DataColumnSpec colSpec : tableSpec) {
-//				if(colSpec.getType().isCompatible(DoubleValue.class)) {
-//					inclSet.add(colSpec.getName());
-//				}
-//			}
-//			NodeSettings defaultSettings = ScatterPlot3DSettings.createDefaults(CFGKEY_COL_FILTER, inclSet.toArray(new String[0]), new String[0], false);
-//			DataColumnSpecFilterConfiguration filterConfig = new DataColumnSpecFilterConfiguration(CFGKEY_COL_FILTER);
-//			filterConfig.loadConfigurationInDialog(defaultSettings, tableSpec);
-//			m_settings.getFilterConfiguration().loadConfigurationInDialog(defaultSettings, tableSpec);
-//		}
-//		
-//		m_colSelectionPanel.loadConfiguration(m_settings.getFilterConfiguration(), tableSpec);
-//		m_colSelectionPanel.resetHiding();
-//		m_count.setValue(m_settings.getCount());
-//		m_showAllData.setSelected(m_settings.getShowAllData());
+		DataTableSpec tableSpec = specs[ScatterPlot3DSettings.MAIN_DATA_TABLE_IN_PORT];
+		try {
+			m_settings.loadSettingsInDialog(settings, tableSpec);
+		} catch (Exception e) {
+			LinkedHashSet<String> inclSet = new LinkedHashSet<String>();
+			for (DataColumnSpec colSpec : tableSpec) {
+				if (colSpec.getType().isCompatible(DoubleValue.class)) {
+					inclSet.add(colSpec.getName());
+				}
+			}
+			NodeSettings defaultSettings = ScatterPlot3DSettings.createDefaults(ScatterPlot3DSettings.CFGKEY_COL_FILTER,
+					inclSet.toArray(new String[0]), new String[0], false);
+			DataColumnSpecFilterConfiguration filterConfig = new DataColumnSpecFilterConfiguration(
+					ScatterPlot3DSettings.CFGKEY_COL_FILTER);
+			filterConfig.loadConfigurationInDialog(defaultSettings, tableSpec);
+			m_settings.getFilterConfiguration().loadConfigurationInDialog(defaultSettings, tableSpec);
+		}
 
+		m_colSelectionPanel.loadConfiguration(m_settings.getFilterConfiguration(), tableSpec);
+		m_colSelectionPanel.resetHiding();
+		m_isClustered.setSelected(m_settings.getIsClustered());
+		m_clusterType.setSelectedItem(m_settings.getClusterType());
+		m_numClusters.setValue(m_settings.getNumClusters());
+		m_prototypesProvided.setSelected(m_settings.getPrototypesProvided());
+
+		m_showAllData.setSelected(m_settings.getShowAllData());
+		m_count.setValue(m_settings.getCount());
+		m_dbPlotNoiseMembers.setSelected(m_settings.getDBSCANPlotNoise());
+		m_dataPointSize.setValue(m_settings.getDataPointSize());
+		m_prototypePointSize.setValue(m_settings.getPrototypePointSize());
+		m_prototypePointColor.setColor(m_settings.getPrototypePointColor());
+		m_dbNoiseMemberColor.setColor(m_settings.getDBNoiseMemberColor());
 	}
 
 	@Override
 	protected void saveSettingsTo(NodeSettingsWO settings) throws InvalidSettingsException {
 
-		String[] nameArr = new String[2];
+		String[] nameArr = new String[3];
 		try {
 			nameArr = m_colSelectionPanel.getIncludedNamesAsSet().toArray(nameArr);
 		} catch (Exception e) {

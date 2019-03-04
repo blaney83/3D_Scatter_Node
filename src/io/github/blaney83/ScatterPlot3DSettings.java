@@ -124,7 +124,7 @@ public class ScatterPlot3DSettings {
 			m_count.setIntValue(settings.getInt(CFGKEY_COUNT));
 			m_dbscanPlotNoise.setBooleanValue(settings.getBoolean(CFGKEY_DBSCAN_PLOT_NOISE_MEMBERS));
 			m_dataPointSize.setIntValue(settings.getInt(CFGKEY_DATA_POINT_SIZE));
-			m_prototypePointSize.setIntValue(settings.getInt(CFGKEY_DATA_POINT_SIZE));
+			m_prototypePointSize.setIntValue(settings.getInt(CFGKEY_PROTOTYPE_POINT_SIZE));
 			m_prototypePointColor.setColorValue(new Color(settings.getInt(CFGKEY_PROTOTYPE_POINT_COLOR)));
 			m_dbNoiseMemberColor.setColorValue(new Color(settings.getInt(CFGKEY_DBSCAN_NOISE_MEMBER_COLOR)));
 			
@@ -278,7 +278,11 @@ public class ScatterPlot3DSettings {
 		return this.m_dataPointSize.getIntValue();
 	}
 	
-	public Color getColorValue() {
+	public int getPrototypePointSize() {
+		return this.m_prototypePointSize.getIntValue();
+	}
+	
+	public Color getPrototypePointColor() {
 		return this.m_prototypePointColor.getColorValue();
 	}
 	
