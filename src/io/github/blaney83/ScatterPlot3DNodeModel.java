@@ -31,10 +31,14 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	// maybe include settings for point transparency (alpha)
 	// maybe add settings for prototype color and size
 	// maybe use color mapper for points w/o clustering
-	// should be handling or catching mis-matched numClusters before they get to Graph
+	// should be handling or catching mis-matched numClusters before they get to
+	// Graph
 	// fix combo box options
 	// make input 2 optional
-	
+	// option for prototype to be same color as cluster (with outline)
+	// allow for seeding the color (using mixing algorithm)
+	// or just build a better "'n' unique color's algorithm" to increase spread (usefulcodesnips)
+
 	ScatterPlot3DSettings m_settings = new ScatterPlot3DSettings();
 
 	// save/load cfg keys
@@ -50,12 +54,11 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	private short[] m_dataPointColorIndicies;
 	private Coord3d[] m_protoTypePoints;
 
-
 	private int m_xColIndex = -1;
 	private int m_yColIndex = -1;
 	private int m_zColIndex = -1;
 	private int m_clusterColumnIndex = -1;
-	
+
 	private int m_xColProtoIndex = -1;
 	private int m_yColProtoIndex = -1;
 	private int m_zColProtoIndex = -1;
@@ -99,8 +102,9 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 						m_settings.getDBNoiseMemberColor().getAlpha());
 				break;
 			}
-			m_dataPointColors[i] = new Color((dynamicColorValue * (i + 1))+ 55, (dynamicColorValue * ((numColors-1)*i) + 55),
-					255);
+			m_dataPointColors[i] = new Color((int)(Math.random()* 255), 
+					(int)(Math.random()* 255),
+					(int)(Math.random()* 255));
 		}
 
 		for (DataRow row : mainDataTable) {
@@ -112,31 +116,35 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 						Double.valueOf(row.getCell(m_yColIndex).toString()),
 						Double.valueOf(row.getCell(m_zColIndex).toString()));
 				m_dataPointColorIndicies[totalPointsCreated] = 0;
-			}else {
+			} else {
 				if (m_settings.getIsClustered() && m_clusterColumnIndex > -1) {
 					String[] clusterMembership = row.getCell(m_clusterColumnIndex).toString().toLowerCase().split("_");
-					if(m_settings.getClusterType().equals("DBSCAN")) {
-						if(!m_settings.getDBSCANPlotNoise()) {
-							if(clusterMembership.length == 1) {
-								totalPointsCreated ++;
+					if (m_settings.getClusterType().equals("DBSCAN")) {
+						if (!m_settings.getDBSCANPlotNoise()) {
+							if (clusterMembership.length == 1) {
+								totalPointsCreated++;
 								continue;
 							}
-							m_dataPoints[totalPointsCreated] = new Coord3d(Double.valueOf(row.getCell(m_xColIndex).toString()),
+							m_dataPoints[totalPointsCreated] = new Coord3d(
+									Double.valueOf(row.getCell(m_xColIndex).toString()),
 									Double.valueOf(row.getCell(m_yColIndex).toString()),
 									Double.valueOf(row.getCell(m_zColIndex).toString()));
 							m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(clusterMembership[1]);
 						} else {
-							if(clusterMembership.length == 1) {
-								m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(String.valueOf((m_dataPointColorIndicies.length-1)));
+							if (clusterMembership.length == 1) {
+								m_dataPointColorIndicies[totalPointsCreated] = Short
+										.valueOf(String.valueOf((m_dataPointColorIndicies.length - 1)));
 							} else {
 								m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(clusterMembership[1]);
 							}
-							m_dataPoints[totalPointsCreated] = new Coord3d(Double.valueOf(row.getCell(m_xColIndex).toString()),
+							m_dataPoints[totalPointsCreated] = new Coord3d(
+									Double.valueOf(row.getCell(m_xColIndex).toString()),
 									Double.valueOf(row.getCell(m_yColIndex).toString()),
 									Double.valueOf(row.getCell(m_zColIndex).toString()));
 						}
-					}else {
-						m_dataPoints[totalPointsCreated] = new Coord3d(Double.valueOf(row.getCell(m_xColIndex).toString()),
+					} else {
+						m_dataPoints[totalPointsCreated] = new Coord3d(
+								Double.valueOf(row.getCell(m_xColIndex).toString()),
 								Double.valueOf(row.getCell(m_yColIndex).toString()),
 								Double.valueOf(row.getCell(m_zColIndex).toString()));
 						m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(clusterMembership[1]);
@@ -148,34 +156,35 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 			}
 			totalPointsCreated++;
 		}
-		
-		if(inData.length > 1 && m_settings.getPrototypesProvided()) {
+
+		if (inData.length > 1 && m_settings.getPrototypesProvided()) {
 			BufferedDataTable prototypeTable = inData[ScatterPlot3DSettings.PROTOTYPE_TABLE_IN_PORT];
-			//could use user provided cluster number and catch errors, but using ProtoTable size instead
+			// could use user provided cluster number and catch errors, but using ProtoTable
+			// size instead
 			int trueClusterNumber = (int) prototypeTable.size();
 			m_protoTypePoints = new Coord3d[trueClusterNumber];
 			int count = 0;
-			for(DataRow row : prototypeTable) {
+			for (DataRow row : prototypeTable) {
 				m_protoTypePoints[count] = new Coord3d(Double.valueOf(row.getCell(m_xColProtoIndex).toString()),
 						Double.valueOf(row.getCell(m_yColProtoIndex).toString()),
 						Double.valueOf(row.getCell(m_zColProtoIndex).toString()));
-				count ++;
+				count++;
 			}
 		}
 	}
 
 	@Override
 	protected void reset() {
-		if(m_dataPoints != null) {
+		if (m_dataPoints != null) {
 			m_dataPoints = null;
 		}
-		if(m_dataPointColorIndicies != null) {
+		if (m_dataPointColorIndicies != null) {
 			m_dataPointColorIndicies = null;
 		}
-		if(m_dataPointColors != null) {
+		if (m_dataPointColors != null) {
 			m_dataPointColors = null;
 		}
-		if(m_protoTypePoints != null) {
+		if (m_protoTypePoints != null) {
 			m_protoTypePoints = null;
 		}
 	}
@@ -399,15 +408,15 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	protected Coord3d[] getDataPoints() {
 		return m_dataPoints;
 	}
-	
+
 	protected Color[] getDataPointColors() {
 		return m_dataPointColors;
 	}
-	
+
 	protected short[] getDataPointColorIndicies() {
 		return m_dataPointColorIndicies;
 	}
-	
+
 	protected Coord3d[] getPrototypePoints() {
 		return m_protoTypePoints;
 	}
