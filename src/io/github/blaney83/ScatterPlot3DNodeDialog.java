@@ -100,6 +100,7 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 				return ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY[currentSelected];
 			}
 		};
+		
 		m_clusterType.setModel(comboBoxModel);
 
 		m_colSelectionPanel.setIncludeTitle("Choose three columns (X, Y, Z)");

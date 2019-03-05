@@ -3,35 +3,55 @@
     <name>ScatterPlot3D</name>
     
     <shortDescription>
-        A 3 Dimensional representation of points in space for a given data set.
+        A 3 Dimensional representation of points in space for a given data set. 
     </shortDescription>
     
     <fullDescription>
-        <intro>Insert long description here...</intro>
+        <intro>This node plots three columns (x, y, z variables) in 3 dimensional space displayed as a moveable, exapandable and rotating graph. It also allows for the colorization
+         of data points based on their cluster membership, as determined by a previous clustering process. Currently, this node will colorize data clustered by K-Means, Fuzzy C-Means 
+         and DBSCAN nodes. When operating on K-Means clustered data, you may also pass the prototypes table to the second In-Port to graph the cluster prototypes in 3D space and alter
+         their appearance so they stand out from the table data. Other options are described below.
+         </intro>
         
-        
-        <option name="short name of first option (like in the dialog)">description of first option</option>
-        <option name="short name of second option (like in the dialog)">description of second option</option>
-        <!-- possibly more options that can also be grouped by tabs -->
-        <!--
-        <tab name="Standard Options">
-            <option name="short name of first option (like in the dialog)">description of first option</option>
-            <option name="short name of second option (like in the dialog)">description of second option</option>
+         <tab name="Standard Options">       
+        <option name="Column (Variable) Selection">Choose three columns from the data table to serve as the X, Y and Z axis variable in the 3D Graph</option>
+        <option name="Is the data Clusetered">If the data has been previously clustered by a K-Means, Fuzzy C-Means or DBSCAN node, then selecting this option
+        will enable the full suite of clustering options and allow for colorized cluster representation in the graph</option>
+        <option name="Cluster Type"> Select the method of clustering used on the data table. This will enable different settings depending on which type of clustering 
+        has been performed (such as filtering data whose cluster membership belongs to the "Noise" cluster for DBSCAN). Be aware, that incorrectly selecting the cluster type
+        may cause issues during execution.</option>
+        <option name="Number of cluster">Provide the number of clusters found in the custering operations previously performed. NOTE: if providing DBSCAN data, do NOT include 
+        the "Noise" cluster in this total (ex: 4 clusters and 1 "Noise" cluster have been identified, enter 4"). </option>
+        <option name="Prototype table provided"> Select this option if the method used (and also identified above) is K-means clustering AND you have provided the matching prototype
+        table at the 2nd In-Port. This table will have been created as an Out-Port table by the K-Means clustering node.</option>
+                </tab>
+
+        <tab name="View Options">
+            <option name="Plot all real data points">Select this option if you wish to have 1 : 1 data points on the graph to rows of data in the provided table.
+            Unselect if you wish to specify the number of points plotted in the next option.
+            </option>
+            <option name="Number of plotted points">Enabled when the previous option is not selected, this option allows you to set the number of rows from the data table you
+            would like represented as points on the graph. NOTE: If you are providing a DBSCAN clustered data set and have correctly provided the requisite settings, the number of points
+            plotted will skip members of the "Noise" cluster if you have selected to not plot them and indlude them in the count is that option is enabled.</option>
+            <option name="Plot members of the 'Noise' cluster">The option is enabled when you have indicated your data table was clustered using the DBSCAN algorithm and selecting this
+            option will plot members of the "Noise" cluster, whereas un-checking this option will only plot members of defined clusters to allow for more distinct visual groupings.
+            </option>
+            <option name="Point size">Select the size (in pixels) of each individual point on the 3D graph.</option>
+            <option name="Prototype Point Size">Enabled when you have indicated a K-means clustered data set and provided a prototype table, this view option allows you to specify the sice
+            of the prototype points on the graph to allow for better distinction between data and prototypes.</option>
+            <option name="Prototype Point Color">Enabled when you have indicated a K-means clustered data set and provided a prototype table, this view option allows you to specify the
+            color of the prototype points on the graph to allow for better distinction between data and prototypes.</option>
         </tab>
-        <tab name="Advanced Options">
-            <option name="short name of first advanced option (like in the dialog)">description of first advanced option</option>
-        </tab>
-        -->
     </fullDescription>
     
     <ports>
-        <inPort index="0" name="In-Port name">Description of first input port...</inPort>
-        <!-- possibly more input ports here-->
-        <outPort index="0" name="Out-Port name">Description of first output port...</outPort>
-        <!-- possibly more output ports here-->
+        <inPort index="0" name="Data Table">Table of data to plot in 3-Dimensional space. This table must have at least 3 numeric columns (x, y, z axis) and may be the output table
+        from a clustering node if you wish to color the data by cluster.</inPort>
+        <inPort index="1" name="(Optional) Prototype Table">Prototype table created by a K-means clustering node. Please ensure proper settings configuration prior to execution</inPort>
+        <outPort index="0" name="Data Table">Original data table (unaltered) from In=Port #1.</outPort>
     </ports>    
     <views>
-        <view index="0" name="name of first view">Description of first view...</view>
-        <!--view index="1" name="name of second view">Description of second view...</view-->
+        <view index="0" name="3-D Graph Representation">An interactive 3-Dimensional representation of provided data points (and optionall cluster prototypes) which can be rotated and 
+        scaled.</view>
     </views>
 </knimeNode>
