@@ -28,6 +28,10 @@ import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
+import org.knime.core.node.defaultnodesettings.DialogComponentStringListSelection;
+import org.knime.core.node.defaultnodesettings.DialogComponentStringSelection;
+import org.knime.core.node.defaultnodesettings.SettingsModelString;
+import org.knime.core.node.defaultnodesettings.SettingsModelStringArray;
 import org.knime.core.node.util.filter.column.DataColumnSpecFilterConfiguration;
 import org.knime.core.node.util.filter.column.DataColumnSpecFilterPanel;
 
@@ -43,7 +47,7 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 
 	private final DataColumnSpecFilterPanel m_colSelectionPanel = new DataColumnSpecFilterPanel();
 	private final JCheckBox m_isClustered = new JCheckBox();
-	private JComboBox<String[]> m_clusterType = new JComboBox<String[]>();
+	private JComboBox m_clusterType = new JComboBox();
 	private JSpinner m_numClusters = new JSpinner(new SpinnerNumberModel(2, 2, Integer.MAX_VALUE, 1));
 	private final JCheckBox m_prototypesProvided = new JCheckBox();
 //	m_clusterType
@@ -62,46 +66,9 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 			ScatterPlot3DSettings.DEFAULT_DBSCAN_NOISE_MEMBER_COLOR);
 
 	protected ScatterPlot3DNodeDialog() {
-		ComboBoxModel<String[]> comboBoxModel = new ComboBoxModel<String[]>() {
-
-			private int currentSelected = 0;
-
-			@Override
-			public int getSize() {
-				return ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY.length;
-			}
-
-			@Override
-			public String[] getElementAt(int index) {
-				return new String[] { ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY[index] };
-			}
-
-			@Override
-			public void addListDataListener(ListDataListener l) {
-			}
-
-			@Override
-			public void removeListDataListener(ListDataListener l) {
-			}
-
-			@Override
-			public void setSelectedItem(Object anItem) {
-				int count = 0;
-				for (String clusterType : ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY) {
-					if (clusterType.equals(anItem.toString())) {
-						currentSelected = count;
-					}
-					count++;
-				}
-			}
-
-			@Override
-			public Object getSelectedItem() {
-				return ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY[currentSelected];
-			}
-		};
-		
-		m_clusterType.setModel(comboBoxModel);
+		for(String clusterType : ScatterPlot3DSettings.DEFAULT_CLUSTER_TYPES_ARRAY) {
+			m_clusterType.addItem(clusterType);
+		}
 
 		m_colSelectionPanel.setIncludeTitle("Choose three columns (X, Y, Z)");
 		m_colSelectionPanel.setExcludeTitle("Excluded from model");
@@ -156,7 +123,7 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 		panel.add(new JLabel("What method of clustering has been used?"), constraints);
 		constraints.gridx = 1;
 		panel.add(m_clusterType, constraints);
-
+//
 		m_clusterType.addActionListener(new ActionListener() {
 
 			@Override
@@ -278,6 +245,14 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 		panel.add(m_prototypePointColor, constraints);
 
 		addTab("View", panel);
+		
+		constraints.gridy++;
+		constraints.gridx = 0;
+		panel.add(new JLabel("Noise color"), constraints);
+		constraints.gridx = 1;
+		panel.add(m_dbNoiseMemberColor, constraints);
+
+		addTab("View", panel);
 	}
 
 	@Override
@@ -304,7 +279,7 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 		m_colSelectionPanel.loadConfiguration(m_settings.getFilterConfiguration(), tableSpec);
 		m_colSelectionPanel.resetHiding();
 		m_isClustered.setSelected(m_settings.getIsClustered());
-		m_clusterType.setSelectedItem(m_settings.getClusterType());
+		m_clusterType.getModel().setSelectedItem(m_settings.getClusterType());
 		m_numClusters.setValue(m_settings.getNumClusters());
 		m_prototypesProvided.setSelected(m_settings.getPrototypesProvided());
 

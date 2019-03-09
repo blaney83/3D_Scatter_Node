@@ -22,7 +22,11 @@ public class ScatterPlot3DGraphPanel extends AbstractAnalysis {
 		//this chunkVVVVVVVV
 		Color[] pointColors = new Color[m_nodeModel.getDataPointColorIndicies().length];
 		int count = 0;
+		System.out.println(pointColors.length);
+		System.out.println(m_nodeModel.getDataPointColors().length);
+		System.out.println(m_nodeModel.getDataPointColorIndicies().length);
 		for(Short index: m_nodeModel.getDataPointColorIndicies()) {
+//			System.out.println(index);
 			pointColors[count] = m_nodeModel.getDataPointColors()[(int) index];
 			count ++;
 		}

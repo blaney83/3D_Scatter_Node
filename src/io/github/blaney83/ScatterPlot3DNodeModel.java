@@ -64,7 +64,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	private int m_zColProtoIndex = -1;
 
 	protected ScatterPlot3DNodeModel() {
-		super(2, 1);
+		super(1, 1);
 	}
 
 	@Override
@@ -89,9 +89,9 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 		int numColors = 1;
 		if (m_settings.getIsClustered()) {
 			numColors = m_settings.getNumClusters();
-			if (m_settings.getClusterType().equals("DBSCAN") && m_settings.getDBSCANPlotNoise()) {
+//			if (m_settings.getClusterType().equals("DBSCAN") && m_settings.getDBSCANPlotNoise()) {
 				numColors++;
-			}
+//			}
 		}
 		m_dataPointColors = new Color[numColors];
 		int dynamicColorValue = 200 / (numColors + 1);
@@ -106,7 +106,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 					(int)(Math.random()* 255),
 					(int)(Math.random()* 255));
 		}
-
+		int dbNonNoiseCount = 0;
 		for (DataRow row : mainDataTable) {
 			if (totalPointsCreated >= numPoints) {
 				break;
@@ -130,10 +130,11 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 									Double.valueOf(row.getCell(m_yColIndex).toString()),
 									Double.valueOf(row.getCell(m_zColIndex).toString()));
 							m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(clusterMembership[1]);
+							dbNonNoiseCount ++;
 						} else {
 							if (clusterMembership.length == 1) {
 								m_dataPointColorIndicies[totalPointsCreated] = Short
-										.valueOf(String.valueOf((m_dataPointColorIndicies.length - 1)));
+										.valueOf(String.valueOf((m_dataPointColors.length - 1)));
 							} else {
 								m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(clusterMembership[1]);
 							}
@@ -156,7 +157,25 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 			}
 			totalPointsCreated++;
 		}
-
+		
+		//restructure data arrays to handle DBSCAN no-noise plots
+		if (m_settings.getClusterType().equals("DBSCAN") && !m_settings.getDBSCANPlotNoise() &&
+				m_settings.getShowAllData() && dbNonNoiseCount > 0) {
+			System.out.println("Fired");
+			Coord3d[] placeHolderCoords = new Coord3d[dbNonNoiseCount];
+			short[] placeHolderIndicies = new short[dbNonNoiseCount];
+			int resizeCount = 0;
+			for(int j = 0; j < numPoints; j++) {
+				if(m_dataPoints[j] != null) {
+					placeHolderCoords[resizeCount] = m_dataPoints[j];
+					placeHolderIndicies[resizeCount] = m_dataPointColorIndicies[j];
+					resizeCount ++;
+				}
+			}
+			m_dataPoints = placeHolderCoords;
+			m_dataPointColorIndicies = placeHolderIndicies;
+		}
+		
 		if (inData.length > 1 && m_settings.getPrototypesProvided()) {
 			BufferedDataTable prototypeTable = inData[ScatterPlot3DSettings.PROTOTYPE_TABLE_IN_PORT];
 			// could use user provided cluster number and catch errors, but using ProtoTable
@@ -245,7 +264,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 				throw new InvalidSettingsException(
 						"The data table provided does not contain three numeric columns for plotting.");
 			}
-			if (!clusterColumnIdentified) {
+			if (m_settings.getIsClustered() && !clusterColumnIdentified) {
 				throw new InvalidSettingsException(
 						"You have indicated that the data table has been previous clustered, but this node cannot"
 								+ " detect a cluster membership column. Please make sure you have correctly chosen the clustering method used during"

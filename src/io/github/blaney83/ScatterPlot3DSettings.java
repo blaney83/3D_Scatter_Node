@@ -152,7 +152,7 @@ public class ScatterPlot3DSettings {
 			
 			settings.addBoolean(CFGKEY_SHOW_ALL, m_showAllData.getBooleanValue());
 			settings.addInt(CFGKEY_COUNT, m_count.getIntValue());
-			settings.addBoolean(CFGKEY_DBSCAN_PLOT_NOISE_MEMBERS, DEFAULT_DBSCAN_PLOT_NOISE_MEMBERS);
+			settings.addBoolean(CFGKEY_DBSCAN_PLOT_NOISE_MEMBERS, m_dbscanPlotNoise.getBooleanValue());
 			settings.addInt(CFGKEY_DATA_POINT_SIZE, m_dataPointSize.getIntValue());
 			settings.addInt(CFGKEY_PROTOTYPE_POINT_SIZE, m_prototypePointSize.getIntValue());
 			settings.addInt(CFGKEY_PROTOTYPE_POINT_COLOR, m_prototypePointColor.getColorValue().getRGB());
