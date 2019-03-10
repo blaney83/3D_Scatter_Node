@@ -2,6 +2,7 @@ package io.github.blaney83;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.jzy3d.colors.Color;
@@ -15,6 +16,9 @@ import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.ModelContent;
+import org.knime.core.node.ModelContentRO;
+import org.knime.core.node.ModelContentWO;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
@@ -368,29 +372,32 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 			throws IOException, CanceledExecutionException {
 		File file = new File(internDir, ScatterPlot3DSettings.FILE_NAME);
 		try (FileInputStream fis = new FileInputStream(file)) {
-//			ModelContentRO modelContent = ModelContent.loadFromXML(fis);
-//			try {
-//				int numFnTerms = modelContent.getInt(INTERNAL_MODEL_NUM_FUNCTION_TERM_KEY);
-//				int numCalcPoints = modelContent.getInt(INTERNAL_MODEL_NUM_CALC_POINT_KEY);
-//				m_termSet = new LinkedHashSet<FunctionTerm>();
-//				m_calcPoints = new CalculatedPoint[numCalcPoints];
-//				for (int i = 0; i < numFnTerms; i++) {
-//					FunctionTerm newTerm = new FunctionTerm();
-//					ModelContentRO subContent = modelContent.getModelContent(INTERNAL_MODEL_TERM_KEY + i);
-//					newTerm.loadFrom(subContent);
-//					m_termSet.add(newTerm);
-//				}
-//
-//				for (int i = 0; i < numCalcPoints; i++) {
-//					CalculatedPoint newPoint = new CalculatedPoint();
-//					ModelContentRO subContent = modelContent.getModelContent(INTERNAL_MODEL_POINT_KEY + i);
-//					newPoint.loadFrom(subContent);
-//					m_calcPoints[i] = newPoint;
-//				}
-//
-//			} catch (InvalidSettingsException e) {
-//				throw new IOException("There was a problem loading the internal state of this node.");
-//			}
+			ModelContentRO modelContent = ModelContent.loadFromXML(fis);
+			try {
+				int numDataPoints = modelContent.getInt(ScatterPlot3DSettings.INTERNAL_NUM_PLOTTED_POINT);
+				m_dataPoints = new Coord3d[numDataPoints];
+				m_dataPointColorIndicies = new short[numDataPoints];
+				for(int i = 0; i < numDataPoints; i ++) {
+					System.out.println("x" + modelContent.getInt(ScatterPlot3DSettings.INTERNAL_X_VAL + i));
+					System.out.println("y" + modelContent.getInt(ScatterPlot3DSettings.INTERNAL_Y_VAL + i));
+					System.out.println("z" + modelContent.getInt(ScatterPlot3DSettings.INTERNAL_Z_VAL + i));
+					m_dataPoints[i] = new Coord3d(modelContent.getInt(ScatterPlot3DSettings.INTERNAL_X_VAL + i),
+							modelContent.getInt(ScatterPlot3DSettings.INTERNAL_Y_VAL + i),
+							modelContent.getInt(ScatterPlot3DSettings.INTERNAL_Z_VAL + i));
+					m_dataPointColorIndicies[i] = modelContent.getShort(ScatterPlot3DSettings.INTERNAL_COLOR_INDEX + i);
+				}
+				int numColors = modelContent.getInt(ScatterPlot3DSettings.INTERNAL_NUM_COLORS);
+				m_dataPointColors = new Color[numColors];
+				for(int j = 0; j < numColors; j ++) {
+					m_dataPointColors[j] = new Color(modelContent.getFloat(ScatterPlot3DSettings.INTERNAL_RED_VAL + j),
+							modelContent.getFloat(ScatterPlot3DSettings.INTERNAL_BLUE_VAL + j),
+							modelContent.getFloat(ScatterPlot3DSettings.INTERNAL_GREEN_VAL + j),
+							modelContent.getFloat(ScatterPlot3DSettings.INTERNAL_ALPHA_VAL + j));
+				}
+
+			} catch (InvalidSettingsException e) {
+				throw new IOException("There was a problem loading the internal state of this node.");
+			}
 
 		}
 	}
@@ -398,26 +405,37 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	@Override
 	protected void saveInternals(final File internDir, final ExecutionMonitor exec)
 			throws IOException, CanceledExecutionException {
-//		if (m_termSet != null && m_calcPoints != null) {
-//			ModelContent modelContent = new ModelContent(INTERNAL_MODEL_NAME_KEY);
-//			modelContent.addInt(INTERNAL_MODEL_NUM_FUNCTION_TERM_KEY, m_termSet.size());
-//			modelContent.addInt(INTERNAL_MODEL_NUM_CALC_POINT_KEY, m_calcPoints.length);
-//			int count = 0;
-//			for (FunctionTerm fnTerm : m_termSet) {
-//				ModelContentWO subContentWO = modelContent.addModelContent(INTERNAL_MODEL_TERM_KEY + count);
-//				fnTerm.saveTo(subContentWO);
-//				count++;
-//			}
-//			count = 0;
-//			for (CalculatedPoint calcPoint : m_calcPoints) {
-//				ModelContentWO subContentWO = modelContent.addModelContent(INTERNAL_MODEL_POINT_KEY + count);
-//				calcPoint.saveTo(subContentWO);
-//				count++;
-//			}
-//			File file = new File(internDir, FILE_NAME);
-//			FileOutputStream fos = new FileOutputStream(file);
-//			modelContent.saveToXML(fos);
-//		}
+		//could potentiall store column names, row keys, colors and indicies (or each color with its row keys)
+		if (m_dataPoints != null) {
+			ModelContent modelContent = new ModelContent(INTERNAL_MODEL_NAME_KEY);
+			modelContent.addInt(ScatterPlot3DSettings.INTERNAL_NUM_PLOTTED_POINT, m_dataPoints.length);
+			modelContent.addInt(ScatterPlot3DSettings.INTERNAL_NUM_COLORS, m_dataPointColors.length);
+			int count = 0;
+			for (Coord3d dataPoint: m_dataPoints) {
+				//saving data points
+				modelContent.addDouble(ScatterPlot3DSettings.INTERNAL_X_VAL + count, dataPoint.x);
+				modelContent.addDouble(ScatterPlot3DSettings.INTERNAL_Y_VAL + count, dataPoint.y);
+				modelContent.addDouble(ScatterPlot3DSettings.INTERNAL_Z_VAL + count, dataPoint.z);
+				count++;
+			}
+			count = 0;
+			for (Color pointColor : m_dataPointColors) {
+				modelContent.addFloat(ScatterPlot3DSettings.INTERNAL_RED_VAL + count, pointColor.r);
+				modelContent.addFloat(ScatterPlot3DSettings.INTERNAL_BLUE_VAL + count, pointColor.b);
+				modelContent.addFloat(ScatterPlot3DSettings.INTERNAL_GREEN_VAL + count, pointColor.g);
+				modelContent.addFloat(ScatterPlot3DSettings.INTERNAL_ALPHA_VAL + count, pointColor.a);
+				count++;
+			}
+			count = 0;
+			for(short pointIndex : m_dataPointColorIndicies) {
+				modelContent.addShort(ScatterPlot3DSettings.INTERNAL_COLOR_INDEX + count, pointIndex);
+				count++;
+			}
+			
+			File file = new File(internDir, ScatterPlot3DSettings.FILE_NAME);
+			FileOutputStream fos = new FileOutputStream(file);
+			modelContent.saveToXML(fos);
+		}
 	}
 
 	protected ScatterPlot3DSettings getSettings() {

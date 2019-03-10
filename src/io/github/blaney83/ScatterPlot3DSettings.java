@@ -36,6 +36,17 @@ public class ScatterPlot3DSettings {
 	static final String CFGKEY_CLUSTER_TYPE = "typeCluster";
 	static final String CFGKEY_PROTOTYPES_PROVIDED = "prototypesProvided";
 
+	//view internals keys
+	static final String INTERNAL_NUM_COLORS = "numColors";
+	static final String INTERNAL_NUM_PLOTTED_POINT = "truePoints";
+	static final String INTERNAL_X_VAL = "intXVal";
+	static final String INTERNAL_Y_VAL = "intYVal";
+	static final String INTERNAL_Z_VAL = "intZVal";
+	static final String INTERNAL_RED_VAL = "redVal";
+	static final String INTERNAL_BLUE_VAL = "blueVal";
+	static final String INTERNAL_GREEN_VAL = "greenVal";
+	static final String INTERNAL_ALPHA_VAL = "alphaVal";
+	static final String INTERNAL_COLOR_INDEX = "colorIndex";
 
 	// filter cfg keys
 	static final String CFGKEY_COL_FILTER = "colFilter";
