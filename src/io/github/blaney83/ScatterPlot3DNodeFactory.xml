@@ -7,7 +7,8 @@
     </shortDescription>
     
     <fullDescription>
-        <intro>This node plots three columns (x, y, z variables) in 3 dimensional space displayed as a moveable, exapandable and rotating graph. It also allows for the colorization
+        <intro>
+        This node plots three columns (x, y, z variables) in 3 dimensional space displayed as a moveable, exapandable and rotating graph. It also allows for the colorization
          of data points based on their cluster membership, as determined by a previous clustering process. Currently, this node will colorize data clustered by K-Means, Fuzzy C-Means 
          and DBSCAN nodes. When operating on K-Means clustered data, you may also pass the prototypes table to the second In-Port to graph the cluster prototypes in 3D space and alter
          their appearance so they stand out from the table data. Other options are described below.
@@ -37,10 +38,12 @@
             option will plot members of the "Noise" cluster, whereas un-checking this option will only plot members of defined clusters to allow for more distinct visual groupings.
             </option>
             <option name="Point size">Select the size (in pixels) of each individual point on the 3D graph.</option>
-            <option name="Prototype Point Size">Enabled when you have indicated a K-means clustered data set and provided a prototype table, this view option allows you to specify the sice
+            <option name="Prototype Point Size">Enabled when you have indicated a K-means clustered data set and provided a prototype table, this view option allows you to specify the size
             of the prototype points on the graph to allow for better distinction between data and prototypes.</option>
             <option name="Prototype Point Color">Enabled when you have indicated a K-means clustered data set and provided a prototype table, this view option allows you to specify the
             color of the prototype points on the graph to allow for better distinction between data and prototypes.</option>
+            <option name="Noise Cluster Color">Enabled when you have indicated a DBSCAN clustered data set, this view option allows you to specify the
+            color of members of the Noise cluster on the graph to allow for better distinction between clusters and noise.</option>
         </tab>
     </fullDescription>
     
@@ -51,7 +54,7 @@
         <outPort index="0" name="Data Table">Original data table (unaltered) from In=Port #1.</outPort>
     </ports>    
     <views>
-        <view index="0" name="3-D Graph Representation">An interactive 3-Dimensional representation of provided data points (and optionall cluster prototypes) which can be rotated and 
+        <view index="0" name="3-D Graph Representation">An interactive 3-Dimensional representation of provided data points (and optional cluster prototypes) which can be rotated and 
         scaled.</view>
     </views>
 </knimeNode>
