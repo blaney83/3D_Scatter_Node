@@ -88,11 +88,11 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 
 		panel.add(new JLabel("Select the three independent variables to model"), constraints);
 		constraints.gridy++;
-
+		constraints.gridwidth = 4;
 		panel.add(m_colSelectionPanel, constraints);
 		constraints.gridy++;
 		constraints.gridx = 0;
-
+		constraints.gridwidth = 2;
 		panel.add(new JSeparator(SwingConstants.HORIZONTAL), constraints);
 
 		constraints.gridwidth = 1;
@@ -241,7 +241,7 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 		constraints.gridy++;
 		constraints.gridx = 0;
 		panel.add(new JLabel("Prototype point color"), constraints);
-		constraints.gridx = 1;
+		constraints.gridy++;
 		panel.add(m_prototypePointColor, constraints);
 
 		addTab("View", panel);
@@ -249,7 +249,7 @@ public class ScatterPlot3DNodeDialog extends NodeDialogPane {
 		constraints.gridy++;
 		constraints.gridx = 0;
 		panel.add(new JLabel("Noise color"), constraints);
-		constraints.gridx = 1;
+		constraints.gridy++;
 		panel.add(m_dbNoiseMemberColor, constraints);
 
 		addTab("View", panel);

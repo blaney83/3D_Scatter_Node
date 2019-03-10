@@ -62,7 +62,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	private int m_zColProtoIndex = -1;
 
 	protected ScatterPlot3DNodeModel() {
-		super(1, 1);
+		super(2, 1);
 	}
 
 	@Override
@@ -105,7 +105,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 			if (i > 0 && i % 3 == 0) {
 				masterCount += 3;
 			}
-			if ((i + 1) % 21 == 0) {
+			if ((i + 1) % 18 == 0) {
 				masterCount = 0;
 				shader += (1 - shader) / 2;
 			}

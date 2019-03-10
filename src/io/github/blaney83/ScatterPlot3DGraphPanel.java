@@ -41,8 +41,8 @@ public class ScatterPlot3DGraphPanel extends AbstractAnalysis {
 			chart.getScene().getGraph().add(protoScatter);
 		}
 		chart.getAxeLayout().setXAxeLabel(m_nodeModel.getSettings().getXAxisVarColumn());
-		chart.getAxeLayout().setYAxeLabel(m_nodeModel.getSettings().getXAxisVarColumn());
-		chart.getAxeLayout().setZAxeLabel(m_nodeModel.getSettings().getXAxisVarColumn());
+		chart.getAxeLayout().setYAxeLabel(m_nodeModel.getSettings().getYAxisVarColumn());
+		chart.getAxeLayout().setZAxeLabel(m_nodeModel.getSettings().getZAxisVarColumn());
 	}
 
 }
