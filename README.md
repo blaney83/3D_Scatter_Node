@@ -2,7 +2,8 @@
 3-Dimensional scatter plot node compatible with KNIME analytics platform. Focusing on Eclipse plug-in 3rd party client compatibility.
 
 ![Fuzzy C-Means Clustered Representation](assets/fuzzy_cluster.PNG)
-_Visual representation of data plotted after being clustered by a Fuzzy C-Means node. Note the color variations denote different clusters._
+_Visual representation of data plotted after being clustered by a Fuzzy C-Means node. Color variations denote different clusters._
+
 This node plots three columns (x, y, z variables) in 3 dimensional space displayed as a moveable, exapandable and rotating graph. It also allows for the colorization of data points based on their cluster membership, as determined by a previous clustering process. Currently, this node will colorize data clustered by K-Means, Fuzzy C-Means and DBSCAN nodes. When operating on K-Means clustered data, you may also pass the prototypes table to the second In-Port to graph the cluster prototypes in 3D space and alter their appearance so they stand out from the table data. Other options are described below.
 
 # Options
@@ -21,6 +22,7 @@ Select the method of clustering used on the data table. This will enable differe
 ### Number of Clusters
 Provide the number of clusters found in the custering operations previously performed. NOTE: if providing DBSCAN data, do NOT include the "Noise" cluster in this total (ex: 4 clusters and 1 "Noise" cluster have been identified, enter 4"). 
 ![k-means prototype table](assets/k-means_clusters.PNG)
+
 _Example K-Means calculated prototypes table_
 ![k-means_with_prototypes](assets/k-means_with_prototypes.PNG)
 _Example of clustered data plotted with the associated prototype table. The larger, dark points are the prototype models._
