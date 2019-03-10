@@ -22,7 +22,7 @@ Select the method of clustering used on the data table. This will enable differe
 Provide the number of clusters found in the custering operations previously performed. NOTE: if providing DBSCAN data, do NOT include the "Noise" cluster in this total (ex: 4 clusters and 1 "Noise" cluster have been identified, enter 4"). 
 ![k-means prototype table](assets/k-means_clusters.PNG)
 _Example K-Means calculated prototypes table_
-![k-means_with_prototypes](assets/k-means_with_prototype.PNG)
+![k-means_with_prototypes](assets/k-means_with_prototypes.PNG)
 _Example of clustered data plotted with the associated prototype table. The larger, dark points are the prototype models._
 ### Prototype Table Provided
 Select this option if the method used (and also identified above) is K-means clustering AND you have provided the matching prototype table at the 2nd In-Port. This table will have been created as an Out-Port table by the K-Means clustering node.
