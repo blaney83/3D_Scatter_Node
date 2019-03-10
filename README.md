@@ -68,3 +68,9 @@ Original data table (unaltered) from In=Port #1.
 _Fuzzy C-Means Clustered Data Viewed from the bottom._
 ## 3D Graph Representation
 An interactive 3-Dimensional representation of provided data points (and optional cluster prototypes) which can be rotated and scaled.
+
+# _Known Issues_
+
+ - Optional 2nd In-Port currently needs to be manually disabled in the ScatterPlot3DNodeModel.java constructor when switching back and forth between K-Means and other processed data.
+ - Color selection for non-clustered data is currently not an option given to the user.
+ - Dialog menu needs additional checks to correctly disable/enable options properly as user navigates through the configuration process.
