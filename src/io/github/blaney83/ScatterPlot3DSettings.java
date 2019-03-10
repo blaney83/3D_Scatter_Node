@@ -37,11 +37,17 @@ public class ScatterPlot3DSettings {
 	static final String CFGKEY_PROTOTYPES_PROVIDED = "prototypesProvided";
 
 	//view internals keys
+	static final String INTERNAL_MODEL_NAME_KEY = "internalModel";
 	static final String INTERNAL_NUM_COLORS = "numColors";
 	static final String INTERNAL_NUM_PLOTTED_POINT = "truePoints";
 	static final String INTERNAL_X_VAL = "intXVal";
 	static final String INTERNAL_Y_VAL = "intYVal";
 	static final String INTERNAL_Z_VAL = "intZVal";
+	static final String INTERNAL_PROTO_POINTS_STORED_PROPERLY = "protoPoints";
+	static final String INTERNAL_NUM_PROTO_POINTS = "numProtos";
+	static final String INTERNAL_PROTO_X_VAL = "protoXVal";
+	static final String INTERNAL_PROTO_Y_VAL = "protoYVal";
+	static final String INTERNAL_PROTO_Z_VAL = "protoZVal";
 	static final String INTERNAL_RED_VAL = "redVal";
 	static final String INTERNAL_BLUE_VAL = "blueVal";
 	static final String INTERNAL_GREEN_VAL = "greenVal";

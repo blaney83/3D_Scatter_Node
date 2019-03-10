@@ -22,11 +22,7 @@ public class ScatterPlot3DGraphPanel extends AbstractAnalysis {
 		//this chunkVVVVVVVV
 		Color[] pointColors = new Color[m_nodeModel.getDataPointColorIndicies().length];
 		int count = 0;
-		System.out.println(pointColors.length);
-		System.out.println(m_nodeModel.getDataPointColors().length);
-		System.out.println(m_nodeModel.getDataPointColorIndicies().length);
 		for(Short index: m_nodeModel.getDataPointColorIndicies()) {
-//			System.out.println(index);
 			pointColors[count] = m_nodeModel.getDataPointColors()[(int) index];
 			count ++;
 		}
@@ -40,9 +36,6 @@ public class ScatterPlot3DGraphPanel extends AbstractAnalysis {
 					m_nodeModel.getSettings().getPrototypePointColor().getGreen(), 
 					m_nodeModel.getSettings().getPrototypePointColor().getBlue(),
 					m_nodeModel.getSettings().getPrototypePointColor().getAlpha());
-			for(Coord3d coord : m_nodeModel.getPrototypePoints()) {
-				System.out.println(coord.toString());
-			}
 			Scatter protoScatter = new Scatter(m_nodeModel.getPrototypePoints(), protoColor);
 			protoScatter.setWidth(m_nodeModel.getSettings().getPrototypePointSize());
 			chart.getScene().getGraph().add(protoScatter);

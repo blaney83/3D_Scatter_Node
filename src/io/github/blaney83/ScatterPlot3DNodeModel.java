@@ -37,20 +37,14 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	// maybe use color mapper for points w/o clustering
 	// should be handling or catching mis-matched numClusters before they get to
 	// Graph
-	// fix combo box options
+	// allow color picking for non-clustered data
 	// make input 2 optional
 	// option for prototype to be same color as cluster (with outline)
 	// allow for seeding the color (using mixing algorithm)
-	// or just build a better "'n' unique color's algorithm" to increase spread (usefulcodesnips)
+	// or just build a better "'n' unique color's algorithm" to increase spread
+	// (usefulcodesnips)
 
 	ScatterPlot3DSettings m_settings = new ScatterPlot3DSettings();
-
-	// save/load cfg keys
-	static final String INTERNAL_MODEL_NAME_KEY = "internalModel";
-	static final String INTERNAL_MODEL_NUM_FUNCTION_TERM_KEY = "numFnTerms";
-	static final String INTERNAL_MODEL_NUM_CALC_POINT_KEY = "numCalcPoints";
-	static final String INTERNAL_MODEL_TERM_KEY = "fnTerm";
-	static final String INTERNAL_MODEL_POINT_KEY = "calcPoint";
 
 	// view dependent fields
 	private Coord3d[] m_dataPoints;
@@ -93,22 +87,34 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 		int numColors = 1;
 		if (m_settings.getIsClustered()) {
 			numColors = m_settings.getNumClusters();
-//			if (m_settings.getClusterType().equals("DBSCAN") && m_settings.getDBSCANPlotNoise()) {
+			if (m_settings.getClusterType().equals("DBSCAN") && m_settings.getDBSCANPlotNoise()
+					&& m_settings.getDBSCANPlotNoise()) {
 				numColors++;
-//			}
+			}
 		}
 		m_dataPointColors = new Color[numColors];
-		int dynamicColorValue = 200 / (numColors + 1);
+		int[] colorVals = new int[] { 246, 0, 0, 246, 246, 0, 246, 123, 0, 246, 123, 123, 123, 123, 0, 246, 164, 82,
+				164, 82, 0 };
+		int firstCount = 0;
+		int secondCount = 1;
+		int thirdCount = 2;
+		int masterCount = 0;
+		double shader = .3;
+		float opacity = (float) .6;
 		for (int i = 0; i < numColors; i++) {
-			if (i == numColors - 1 && m_settings.getClusterType().equals("DBSCAN")) {
-				m_dataPointColors[i] = new Color(m_settings.getDBNoiseMemberColor().getRed(),
-						m_settings.getDBNoiseMemberColor().getBlue(), m_settings.getDBNoiseMemberColor().getGreen(),
-						m_settings.getDBNoiseMemberColor().getAlpha());
-				break;
+			if (i > 0 && i % 3 == 0) {
+				masterCount += 3;
 			}
-			m_dataPointColors[i] = new Color((int)(Math.random()* 255), 
-					(int)(Math.random()* 255),
-					(int)(Math.random()* 255));
+			if ((i + 1) % 21 == 0) {
+				masterCount = 0;
+				shader += (1 - shader) / 2;
+			}
+			m_dataPointColors[i] = new Color((int) Math.round((colorVals[firstCount % 3 + masterCount] * shader)),
+					(int) Math.round((colorVals[secondCount % 3 + masterCount] * shader)),
+					(int) Math.round((colorVals[thirdCount % 3 + masterCount] * shader)), opacity);
+			firstCount++;
+			secondCount++;
+			thirdCount++;
 		}
 		int dbNonNoiseCount = 0;
 		for (DataRow row : mainDataTable) {
@@ -134,7 +140,7 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 									Double.valueOf(row.getCell(m_yColIndex).toString()),
 									Double.valueOf(row.getCell(m_zColIndex).toString()));
 							m_dataPointColorIndicies[totalPointsCreated] = Short.valueOf(clusterMembership[1]);
-							dbNonNoiseCount ++;
+							dbNonNoiseCount++;
 						} else {
 							if (clusterMembership.length == 1) {
 								m_dataPointColorIndicies[totalPointsCreated] = Short
@@ -146,6 +152,12 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 									Double.valueOf(row.getCell(m_xColIndex).toString()),
 									Double.valueOf(row.getCell(m_yColIndex).toString()),
 									Double.valueOf(row.getCell(m_zColIndex).toString()));
+							// update the final color
+							m_dataPointColors[m_dataPointColors.length - 1] = new Color(
+									m_settings.getDBNoiseMemberColor().getRed(),
+									m_settings.getDBNoiseMemberColor().getBlue(),
+									m_settings.getDBNoiseMemberColor().getGreen(),
+									m_settings.getDBNoiseMemberColor().getAlpha());
 						}
 					} else {
 						m_dataPoints[totalPointsCreated] = new Coord3d(
@@ -161,25 +173,25 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 			}
 			totalPointsCreated++;
 		}
-		
-		//restructure data arrays to handle DBSCAN no-noise plots
-		if (m_settings.getClusterType().equals("DBSCAN") && !m_settings.getDBSCANPlotNoise() &&
-				m_settings.getShowAllData() && dbNonNoiseCount > 0) {
+
+		// restructure data arrays to handle DBSCAN no-noise plots
+		if (m_settings.getClusterType().equals("DBSCAN") && !m_settings.getDBSCANPlotNoise()
+				&& m_settings.getShowAllData() && dbNonNoiseCount > 0) {
 			System.out.println("Fired");
 			Coord3d[] placeHolderCoords = new Coord3d[dbNonNoiseCount];
 			short[] placeHolderIndicies = new short[dbNonNoiseCount];
 			int resizeCount = 0;
-			for(int j = 0; j < numPoints; j++) {
-				if(m_dataPoints[j] != null) {
+			for (int j = 0; j < numPoints; j++) {
+				if (m_dataPoints[j] != null) {
 					placeHolderCoords[resizeCount] = m_dataPoints[j];
 					placeHolderIndicies[resizeCount] = m_dataPointColorIndicies[j];
-					resizeCount ++;
+					resizeCount++;
 				}
 			}
 			m_dataPoints = placeHolderCoords;
 			m_dataPointColorIndicies = placeHolderIndicies;
 		}
-		
+
 		if (inData.length > 1 && m_settings.getPrototypesProvided()) {
 			BufferedDataTable prototypeTable = inData[ScatterPlot3DSettings.PROTOTYPE_TABLE_IN_PORT];
 			// could use user provided cluster number and catch errors, but using ProtoTable
@@ -377,26 +389,39 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 				int numDataPoints = modelContent.getInt(ScatterPlot3DSettings.INTERNAL_NUM_PLOTTED_POINT);
 				m_dataPoints = new Coord3d[numDataPoints];
 				m_dataPointColorIndicies = new short[numDataPoints];
-				for(int i = 0; i < numDataPoints; i ++) {
-					System.out.println("x" + modelContent.getInt(ScatterPlot3DSettings.INTERNAL_X_VAL + i));
-					System.out.println("y" + modelContent.getInt(ScatterPlot3DSettings.INTERNAL_Y_VAL + i));
-					System.out.println("z" + modelContent.getInt(ScatterPlot3DSettings.INTERNAL_Z_VAL + i));
-					m_dataPoints[i] = new Coord3d(modelContent.getInt(ScatterPlot3DSettings.INTERNAL_X_VAL + i),
-							modelContent.getInt(ScatterPlot3DSettings.INTERNAL_Y_VAL + i),
-							modelContent.getInt(ScatterPlot3DSettings.INTERNAL_Z_VAL + i));
+				for (int i = 0; i < numDataPoints; i++) {
+					System.out.println("x" + modelContent.getDouble(ScatterPlot3DSettings.INTERNAL_X_VAL + i));
+					System.out.println("y" + modelContent.getDouble(ScatterPlot3DSettings.INTERNAL_Y_VAL + i));
+					System.out.println("z" + modelContent.getDouble(ScatterPlot3DSettings.INTERNAL_Z_VAL + i));
+					m_dataPoints[i] = new Coord3d(modelContent.getDouble(ScatterPlot3DSettings.INTERNAL_X_VAL + i),
+							modelContent.getDouble(ScatterPlot3DSettings.INTERNAL_Y_VAL + i),
+							modelContent.getDouble(ScatterPlot3DSettings.INTERNAL_Z_VAL + i));
 					m_dataPointColorIndicies[i] = modelContent.getShort(ScatterPlot3DSettings.INTERNAL_COLOR_INDEX + i);
 				}
 				int numColors = modelContent.getInt(ScatterPlot3DSettings.INTERNAL_NUM_COLORS);
 				m_dataPointColors = new Color[numColors];
-				for(int j = 0; j < numColors; j ++) {
+				for (int j = 0; j < numColors; j++) {
 					m_dataPointColors[j] = new Color(modelContent.getFloat(ScatterPlot3DSettings.INTERNAL_RED_VAL + j),
 							modelContent.getFloat(ScatterPlot3DSettings.INTERNAL_BLUE_VAL + j),
 							modelContent.getFloat(ScatterPlot3DSettings.INTERNAL_GREEN_VAL + j),
 							modelContent.getFloat(ScatterPlot3DSettings.INTERNAL_ALPHA_VAL + j));
 				}
 
+				boolean hasStoredProtos = modelContent
+						.getBoolean(ScatterPlot3DSettings.INTERNAL_PROTO_POINTS_STORED_PROPERLY);
+				if (hasStoredProtos) {
+					int numProtoPoints = modelContent.getInt(ScatterPlot3DSettings.INTERNAL_NUM_PROTO_POINTS);
+					m_protoTypePoints = new Coord3d[numProtoPoints];
+					for (int k = 0; k < numProtoPoints; k++) {
+						m_protoTypePoints[k] = new Coord3d(
+								modelContent.getDouble(ScatterPlot3DSettings.INTERNAL_PROTO_X_VAL + k),
+								modelContent.getDouble(ScatterPlot3DSettings.INTERNAL_PROTO_Y_VAL + k),
+								modelContent.getDouble(ScatterPlot3DSettings.INTERNAL_PROTO_Z_VAL + k));
+					}
+				}
+
 			} catch (InvalidSettingsException e) {
-				throw new IOException("There was a problem loading the internal state of this node.");
+				throw new IOException("There was a problem loading the internal state of this node." + e);
 			}
 
 		}
@@ -405,14 +430,16 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 	@Override
 	protected void saveInternals(final File internDir, final ExecutionMonitor exec)
 			throws IOException, CanceledExecutionException {
-		//could potentiall store column names, row keys, colors and indicies (or each color with its row keys)
+		// could potentiall store column names, row keys, colors and indicies (or each
+		// color with its row keys)
 		if (m_dataPoints != null) {
-			ModelContent modelContent = new ModelContent(INTERNAL_MODEL_NAME_KEY);
+			System.out.println("Saving");
+			ModelContent modelContent = new ModelContent(ScatterPlot3DSettings.INTERNAL_MODEL_NAME_KEY);
 			modelContent.addInt(ScatterPlot3DSettings.INTERNAL_NUM_PLOTTED_POINT, m_dataPoints.length);
 			modelContent.addInt(ScatterPlot3DSettings.INTERNAL_NUM_COLORS, m_dataPointColors.length);
 			int count = 0;
-			for (Coord3d dataPoint: m_dataPoints) {
-				//saving data points
+			for (Coord3d dataPoint : m_dataPoints) {
+				// saving data points
 				modelContent.addDouble(ScatterPlot3DSettings.INTERNAL_X_VAL + count, dataPoint.x);
 				modelContent.addDouble(ScatterPlot3DSettings.INTERNAL_Y_VAL + count, dataPoint.y);
 				modelContent.addDouble(ScatterPlot3DSettings.INTERNAL_Z_VAL + count, dataPoint.z);
@@ -427,11 +454,24 @@ public class ScatterPlot3DNodeModel extends NodeModel {
 				count++;
 			}
 			count = 0;
-			for(short pointIndex : m_dataPointColorIndicies) {
+			for (short pointIndex : m_dataPointColorIndicies) {
 				modelContent.addShort(ScatterPlot3DSettings.INTERNAL_COLOR_INDEX + count, pointIndex);
 				count++;
 			}
-			
+			modelContent.addBoolean(ScatterPlot3DSettings.INTERNAL_PROTO_POINTS_STORED_PROPERLY, false);
+			if (m_settings.getPrototypesProvided() && m_protoTypePoints != null && m_protoTypePoints.length > 0) {
+				modelContent.addBoolean(ScatterPlot3DSettings.INTERNAL_PROTO_POINTS_STORED_PROPERLY, true);
+				count = 0;
+				for (Coord3d protoPoint : m_dataPoints) {
+					// saving data points
+					modelContent.addDouble(ScatterPlot3DSettings.INTERNAL_PROTO_X_VAL + count, protoPoint.x);
+					modelContent.addDouble(ScatterPlot3DSettings.INTERNAL_PROTO_Y_VAL + count, protoPoint.y);
+					modelContent.addDouble(ScatterPlot3DSettings.INTERNAL_PROTO_Z_VAL + count, protoPoint.z);
+					count++;
+				}
+				modelContent.addInt(ScatterPlot3DSettings.INTERNAL_NUM_PROTO_POINTS, count + 1);
+			}
+
 			File file = new File(internDir, ScatterPlot3DSettings.FILE_NAME);
 			FileOutputStream fos = new FileOutputStream(file);
 			modelContent.saveToXML(fos);
